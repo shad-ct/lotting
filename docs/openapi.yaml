@@ -1,0 +1,291 @@
+openapi: 3.0.3
+info:
+  title: Lotto API
+  version: 1.0.0
+  description: >-
+    Offline-draw lotto tracker. Base path /api/v1. Auth: httpOnly cookie
+    (web) and Authorization Bearer (Flutter). Error shape is always
+    { error: { code, message, details } } with stable code strings.
+servers:
+  - url: /api/v1
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: lotto_token
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: NUMBER_ALREADY_DRAWN }
+            message: { type: string }
+            details: { type: object }
+    Game:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [setup, ready, live, finished] }
+        maxNumber: { type: integer }
+        cardSize: { type: integer }
+        playerCount: { type: integer }
+        winRules: { type: object }
+        cardsLockedAt: { type: string, nullable: true }
+        startedAt: { type: string, nullable: true }
+        finishedAt: { type: string, nullable: true }
+        generationStats: { type: object, nullable: true }
+        showExactRankToPlayers: { type: boolean }
+        closeThreshold: { type: integer }
+paths:
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /auth/admin/login:
+    post:
+      security: []
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Logged in }
+        '401': { description: Invalid credentials }
+        '429': { description: Locked or rate limited }
+  /auth/player/login:
+    post:
+      security: []
+      summary: Player login (loginId case-insensitive)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loginId, pin]
+              properties:
+                loginId: { type: string }
+                pin: { type: string }
+      responses:
+        '200': { description: Logged in }
+        '401': { description: Invalid credentials }
+        '429': { description: Locked or rate limited }
+  /auth/me:
+    get:
+      summary: Current session
+      responses:
+        '200': { description: Role + player info }
+        '401': { description: Unauthenticated }
+  /auth/logout:
+    post:
+      summary: Clear the cookie
+      responses:
+        '200': { description: OK }
+  /public/board:
+    get:
+      security: []
+      summary: Master board (no PII beyond confirmed winners)
+      responses:
+        '200': { description: Board snapshot }
+  /me/card:
+    get:
+      summary: Own card with live marks (player token only)
+      responses:
+        '200': { description: Card }
+        '403': { description: Wrong role }
+  /admin/game:
+    get:
+      summary: Current game
+      responses:
+        '200': { description: Game }
+        '404': { description: No game yet }
+  /admin/game:
+    post:
+      summary: Create game (only when none exists or previous finished)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                maxNumber: { type: integer }
+                cardSize: { type: integer }
+                playerCount: { type: integer }
+                winRules: { type: object }
+      responses:
+        '201': { description: Created }
+        '409': { description: Game in progress }
+  /admin/game#patch:
+    patch:
+      summary: Update name / winRules (setup only)
+      responses:
+        '200': { description: Updated }
+  /admin/players/import:
+    post:
+      summary: Import players (JSON array or {csv})
+      responses:
+        '201': { description: Imported }
+  /admin/players:
+    post:
+      summary: Create one player
+      responses:
+        '201': { description: Created }
+  /admin/players/placeholders:
+    post:
+      summary: Create N placeholder players
+      responses:
+        '201': { description: Created }
+  /admin/players/{id}:
+    patch:
+      summary: Edit name, phone, loginId, isActive
+      responses:
+        '200': { description: Updated }
+  /admin/players/{id}:
+    delete:
+      summary: Delete a player (setup only)
+      responses:
+        '200': { description: Deleted }
+  /admin/players/credentials/generate:
+    post:
+      summary: One-time PIN reveal for all PIN-less players
+      responses:
+        '201': { description: Credentials (one-time) }
+  /admin/players/{id}/reset-pin:
+    post:
+      summary: New one-time PIN for one player
+      responses:
+        '201': { description: Credential (one-time) }
+  /admin/players/{id}/sent:
+    patch:
+      summary: Set sent flags
+      responses:
+        '200': { description: Updated }
+  /admin/players/{id}#get:
+    get:
+      summary: Full player detail with card + mark history
+      responses:
+        '200': { description: Detail }
+  /admin/cards/generate:
+    post:
+      summary: Generate (or regenerate while setup) all cards
+      responses:
+        '201': { description: Generation stats }
+        '409': { description: Locked or player-count mismatch }
+  /admin/cards/lock:
+    post:
+      summary: setup -> ready
+      responses:
+        '200': { description: Locked }
+  /admin/game/start:
+    post:
+      summary: ready -> live
+      responses:
+        '200': { description: Started }
+  /admin/game/finish:
+    post:
+      summary: live -> finished
+      responses:
+        '200': { description: Finished }
+  /admin/game/reopen:
+    post:
+      summary: finished -> live (requires {confirm: true})
+      responses:
+        '200': { description: Reopened }
+  /admin/game/reset:
+    post:
+      summary: Rehearsal reset (requires {confirm: "RESET"})
+      responses:
+        '200': { description: Reset to ready }
+  /admin/draws:
+    post:
+      summary: Manual draw {number}. Optional Idempotency-Key header.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+      responses:
+        '201': { description: Drawn }
+        '409': { description: Already drawn / not live }
+        '422': { description: Invalid number }
+  /admin/draws/random:
+    post:
+      summary: Server-picked random draw (crypto.randomInt)
+      responses:
+        '201': { description: Drawn }
+        '409': { description: All drawn / not live }
+  /admin/draws/undo:
+    post:
+      summary: Undo the most recent active draw only
+      responses:
+        '200': { description: Undone }
+        '409': { description: Nothing to undo / confirmed }
+  /admin/draws#get:
+    get:
+      summary: Full log incl. undone entries
+      responses:
+        '200': { description: Log }
+  /admin/status:
+    get:
+      summary: Whole dashboard snapshot
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [rank, serial, name, marks] }
+        - in: query
+          name: full
+          schema: { type: string }
+      responses:
+        '200': { description: Snapshot }
+  /admin/verify-claim:
+    post:
+      summary: Verify a physical claim by serial, verifyCode or loginId
+      responses:
+        '200': { description: Verdict }
+  /admin/wins/{id}/confirm:
+    post:
+      summary: Confirm a pending win (may finish the game)
+      responses:
+        '200': { description: Confirmed }
+  /admin/wins/{id}/reject:
+    post:
+      summary: Reject a pending win
+      responses:
+        '200': { description: Rejected }
+  /admin/export/standings.csv:
+    get:
+      summary: Rank table as CSV
+      responses:
+        '200': { description: CSV file }
+  /admin/audit:
+    get:
+      summary: Audit log (latest 500)
+      responses:
+        '200': { description: Log }

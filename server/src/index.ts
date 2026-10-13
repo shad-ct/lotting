@@ -1,37 +1,43 @@
-import cors from 'cors';
-import dotenv from 'dotenv';
-import express from 'express';
-import helmet from 'helmet';
+import { createServer } from 'node:http';
+import { createApp } from './app.js';
+import { connectDb } from './config/db.js';
+import { assertProdSecrets, env } from './config/env.js';
+import { AdminUser } from './models/AdminUser.js';
+import { attachSockets } from './sockets/index.js';
+import { hashSecret } from './utils/password.js';
 
-dotenv.config();
-
-const app = express();
-app.use(helmet());
-app.use(express.json({ limit: '1mb' }));
-app.use(
-  cors({
-    origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
-    credentials: true,
-  }),
-);
-
-app.get('/api/v1/health', (_req, res) => {
-  res.json({ ok: true, service: 'lotto-server', phase: 'scaffold' });
-});
-
-// Placeholder router mount points (Phases 1-3 will fill these in):
-// - /api/v1/auth/*, /api/v1/public/*, /api/v1/me/*, /api/v1/admin/*
-
-app.use((_req, res) => {
-  res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } });
-});
-
-const PORT = Number(process.env.PORT ?? 3001);
-if (process.env.VITEST == null) {
-  app.listen(PORT, '0.0.0.0', () => {
+/** Seed ONE admin from env at boot if none exists (01 §2.6). No registration endpoint. */
+export async function seedAdmin(): Promise<void> {
+  const count = await AdminUser.countDocuments();
+  if (count === 0) {
+    await AdminUser.create({
+      username: env.ADMIN_USERNAME,
+      passwordHash: await hashSecret(env.ADMIN_PASSWORD),
+    });
     // eslint-disable-next-line no-console
-    console.log(`lotto server (scaffold) listening on :${PORT}`);
+    console.log(`Seeded admin user "${env.ADMIN_USERNAME}"`);
+  }
+}
+
+async function boot(): Promise<void> {
+  assertProdSecrets();
+  await connectDb();
+  await seedAdmin();
+  const app = createApp();
+  const httpServer = createServer(app);
+  attachSockets(httpServer);
+  httpServer.listen(env.PORT, '0.0.0.0', () => {
+    // eslint-disable-next-line no-console
+    console.log(`lotto server listening on :${env.PORT}`);
   });
 }
 
-export default app;
+if (process.env.VITEST == null) {
+  boot().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error('Boot failed:', e);
+    process.exit(1);
+  });
+}
+
+export { createApp };

@@ -17,7 +17,7 @@ const winRulesSchema = z
 export const createGameSchema = z
   .object({
     name: z.string().min(1).max(120),
-    maxNumber: z.number().int().min(9).max(500).default(MAX_NUMBER),
+    maxNumber: z.number().int().min(2).max(500).default(MAX_NUMBER),
     cardSize: z.number().int().min(1).max(100).default(CARD_SIZE),
     playerCount: z.number().int().min(1).max(1000).default(PLAYER_COUNT_DEFAULT),
     winRules: winRulesSchema,
