@@ -92,7 +92,7 @@ export function Setup() {
         </Step>
 
         <Step n={3} title="Generate credentials (one-time PIN reveal)" done={hasPins}>
-          <button type="button" disabled={!game || hasPins} onClick={() => {
+          <button type="button" disabled={!game || hasPins || total < need} onClick={() => {
             setMsg('');
             apiFetch<{ items: Cred[] }>('/api/v1/admin/players/credentials/generate', { method: 'POST' })
               .then((r) => { setCreds(r.items); refresh(); })
@@ -100,6 +100,7 @@ export function Setup() {
           }} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
             Generate PINs
           </button>
+          {game?.status === 'setup' && !hasPins && total < need && <p className="mt-1 text-xs text-neutral-500">Finish step 2 first — all {need} players must be added.</p>}
           {creds.length > 0 && (
             <div className="mt-2 overflow-x-auto">
               <p className="text-sm font-bold text-yellow-200">Copy/download now — PINs can't be shown again.</p>
@@ -120,20 +121,22 @@ export function Setup() {
 
         <Step n={4} title="Generate cards" done={hasCards}>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!game || game.status !== 'setup'} onClick={() => doPost('/api/v1/admin/cards/generate')} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
+            <button type="button" disabled={!game || game.status !== 'setup' || !hasPins} onClick={() => doPost('/api/v1/admin/cards/generate')} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
               Generate cards
             </button>
             {game?.status === 'setup' && hasCards && <span className="text-xs text-neutral-500">Regenerate allowed until locked.</span>}
           </div>
+          {game?.status === 'setup' && !hasPins && <p className="mt-1 text-xs text-neutral-500">Finish step 3 first — every player needs a PIN.</p>}
           {typeof game?.generationStats === 'object' && game?.generationStats != null && (
             <pre className="tnum mt-2 overflow-auto rounded-lg bg-neutral-900 p-2 text-xs">{JSON.stringify(game.generationStats, null, 1)}</pre>
           )}
         </Step>
 
         <Step n={5} title="Lock cards (irreversible)" done={['ready', 'live', 'finished'].includes(game?.status ?? '')}>
-          <button type="button" disabled={!game || game.status !== 'setup'} onClick={() => doPost('/api/v1/admin/cards/lock')} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300 disabled:opacity-40">
+          <button type="button" disabled={!game || game.status !== 'setup' || !hasPins || !hasCards} onClick={() => doPost('/api/v1/admin/cards/lock')} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300 disabled:opacity-40">
             Lock cards — after this, cards can't be changed
           </button>
+          {game?.status === 'setup' && (!hasPins || !hasCards) && <p className="mt-1 text-xs text-neutral-500">Finish steps 3–4 first — PINs and cards for every player.</p>}
         </Step>
 
         <Step n={6} title="Distribute, then start" done={game?.status === 'live' || game?.status === 'finished'}>

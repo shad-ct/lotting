@@ -81,4 +81,22 @@ describe('players CRUD (admin UI manage pages)', () => {
     const big = await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Too Big', playerCount: 111 });
     expect(big.status).toBe(422);
   });
+
+  it('strict step order: PINs need full roster, cards need all PINs', async () => {
+    const admin = await adminToken();
+    expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Order', playerCount: 2 })).status).toBe(201);
+    await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'One' }]);
+
+    const earlyPins = await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin));
+    expect(earlyPins.status).toBe(409);
+    expect((earlyPins.body as { error: { code: string } }).error.code).toBe('PLAYERS_INCOMPLETE');
+
+    await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Two' }]);
+    const earlyCards = await api.post('/api/v1/admin/cards/generate').set(auth(admin));
+    expect(earlyCards.status).toBe(409);
+    expect((earlyCards.body as { error: { code: string } }).error.code).toBe('PINS_INCOMPLETE');
+
+    expect((await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin))).status).toBe(201);
+    expect((await api.post('/api/v1/admin/cards/generate').set(auth(admin))).status).toBe(201);
+  });
 });

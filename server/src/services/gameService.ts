@@ -83,6 +83,14 @@ export async function addPlayers(
 /** Generate PINs for all players that have none. Returns ONE-TIME plain PINs. */
 export async function generateCredentials(game: GameDoc): Promise<{ serial: number; name: string; loginId: string; pin: string }[]> {
   const gameId = game._id as Types.ObjectId;
+  // Step order: PINs only after the full roster is in.
+  const total = await Player.countDocuments({ gameId });
+  if (total !== game.playerCount) {
+    throw err('PLAYERS_INCOMPLETE', `Add all ${game.playerCount} players first (have ${total})`, 409, {
+      need: game.playerCount,
+      have: total,
+    });
+  }
   const players = await Player.find({ gameId, pinHash: null }).sort({ serial: 1 });
   const pins = new Map<string, string>();
   const out: { serial: number; name: string; loginId: string; pin: string }[] = [];
@@ -125,6 +133,11 @@ export async function generateCardsForGame(game: GameDoc, hmacSecret: string): P
       need: game.playerCount,
       have: players.length,
     });
+  }
+  // Step order: cards only after every player has a PIN.
+  const pinless = await Player.countDocuments({ gameId, pinHash: null });
+  if (pinless > 0) {
+    throw err('PINS_INCOMPLETE', `Generate PINs for all players first (${pinless} still missing)`, 409, { pinless });
   }
   await clearCards(gameId);
   const seed = newSeed();
