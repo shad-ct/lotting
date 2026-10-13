@@ -18,10 +18,14 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // NOTE: init.headers must MERGE with (not replace) the default
+  // Content-Type — spreading init last used to drop it on requests that
+  // set extra headers (e.g. Idempotency-Key), yielding 422s.
+  const { headers: initHeaders, ...rest } = init ?? {};
   const res = await fetch(path, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
+    ...rest,
+    headers: { 'Content-Type': 'application/json', ...((initHeaders as Record<string, string>) ?? {}) },
   });
   if (res.status === 204) return undefined as T;
   const text = await res.text();

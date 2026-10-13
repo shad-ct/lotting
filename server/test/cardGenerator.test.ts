@@ -83,4 +83,33 @@ describe('cardGenerator (05 §2.1)', () => {
   it('impossible config (cardSize > maxNumber) throws', () => {
     expect(() => generateCards({ playerCount: 5, cardSize: 20, maxNumber: 10 }, 'x')).toThrow();
   });
+
+  it('invalid maxOverlap (< 0 or >= cardSize) throws INVALID_MAX_OVERLAP', () => {
+    expect(() => generateCards({ ...DEFAULT_CONFIG, maxOverlap: -1 }, 'x')).toThrow('INVALID_MAX_OVERLAP');
+    expect(() => generateCards({ ...DEFAULT_CONFIG, maxOverlap: 16 }, 'x')).toThrow('INVALID_MAX_OVERLAP');
+  });
+
+  it('tight overlap cap forces repair: 20×6/30 with cap 2 ends ≤ 2', () => {
+    for (let s = 0; s < 5; s++) {
+      const { cards } = generateCards({ playerCount: 20, cardSize: 6, maxNumber: 30, maxOverlap: 2 }, `tight-cap-${s}`);
+      const sets = cards.map((c) => new Set(c));
+      for (let i = 0; i < sets.length; i++) {
+        for (let j = i + 1; j < sets.length; j++) {
+          let overlap = 0;
+          for (const x of sets[i]) if (sets[j].has(x)) overlap++;
+          expect(overlap).toBeLessThanOrEqual(2);
+        }
+      }
+    }
+  });
+
+  it('small-combination space (9×3/6): uniqueness fix keeps all keys distinct', () => {
+    for (let s = 0; s < 10; s++) {
+      const { cards } = generateCards({ playerCount: 9, cardSize: 3, maxNumber: 6 }, `tight-unique-${s}`);
+      expect(cards).toHaveLength(9);
+      const keys = cards.map((c) => [...c].sort((a, b) => a - b).join('-'));
+      expect(new Set(keys).size).toBe(9);
+      for (const card of cards) expect(new Set(card).size).toBe(3);
+    }
+  });
 });

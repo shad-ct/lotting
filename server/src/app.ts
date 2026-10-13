@@ -28,7 +28,7 @@ export function createApp(): express.Express {
   );
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
-  app.use(generalLimiter);
+  if (!env.DISABLE_RATE_LIMITS) app.use(generalLimiter);
   app.use(optionalAuth);
 
   app.get('/api/v1/health', (_req, res) => {

@@ -105,7 +105,6 @@ async function afterDraw(
   const gid = String(gameId);
   bus.emit('domain', { type: 'draw:new', gameId: gid, seq, number, drawCount, source });
   bus.emit('domain', { type: 'admin:snapshot', gameId: gid });
-  bus.emit('domain', { type: 'me:update', gameId: gid });
   if (newWinners.length > 0) {
     bus.emit('domain', { type: 'win:detected', gameId: gid, events: newWinners });
   }
@@ -196,7 +195,6 @@ export async function undoLastDraw(game: GameDoc, reason?: string): Promise<Undo
   const gid = String(gameId);
   bus.emit('domain', { type: 'draw:undone', gameId: gid, seq: latest.seq, number: latest.number, drawCount: remaining });
   bus.emit('domain', { type: 'admin:snapshot', gameId: gid });
-  bus.emit('domain', { type: 'me:update', gameId: gid });
 
   return { undone: { seq: latest.seq, number: latest.number }, drawCount: remaining, withdrawnWins };
 }

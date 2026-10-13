@@ -9,7 +9,9 @@ services:
       - lotto-mongo-data:/data/db
 
   server:
-    build: ./server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
     container_name: lotto-server
     restart: unless-stopped
     depends_on:
@@ -23,7 +25,9 @@ services:
       PORT: "3001"
 
   web:
-    build: ./web
+    build:
+      context: .
+      dockerfile: web/Dockerfile
     container_name: lotto-web
     restart: unless-stopped
     depends_on:

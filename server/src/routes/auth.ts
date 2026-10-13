@@ -57,8 +57,16 @@ router.post('/player/login', loginLimiter, validateBody(playerLoginSchema), asyn
     if (isLocked(key)) {
       throw err('ACCOUNT_LOCKED', 'Too many failed attempts, try again later', 429);
     }
-    // Case-insensitive loginId; same generic error for unknown id vs wrong PIN.
-    const player = await Player.findOne({ loginId: { $regex: `^${escapeRegExp(loginId)}$`, $options: 'i' } });
+    // Case-insensitive loginId, scoped to the CURRENT game (one active game
+    // at a time; loginIds are unique per game, not globally). Same generic
+    // error for unknown id vs wrong PIN.
+    const game = await getCurrentGame();
+    const player =
+      game &&
+      (await Player.findOne({
+        gameId: game._id,
+        loginId: { $regex: `^${escapeRegExp(loginId)}$`, $options: 'i' },
+      }));
     const ok = player?.pinHash ? await verifySecret(player.pinHash, pin) : false;
     if (!player || !ok) {
       recordFailure(key);

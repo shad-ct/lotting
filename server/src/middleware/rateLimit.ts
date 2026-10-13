@@ -1,11 +1,19 @@
+import type { NextFunction, Request, Response } from 'express';
 import { MemoryStore, rateLimit } from 'express-rate-limit';
+import { env } from '../config/env.js';
 
 const loginStore = new MemoryStore();
 const drawStore = new MemoryStore();
 const generalStore = new MemoryStore();
 
+function passThrough(_req: Request, _res: Response, next: NextFunction): void {
+  next();
+}
+
 /** Login: 10 attempts / 15 min / IP+loginId (02 §1). */
-export const loginLimiter = rateLimit({
+export const loginLimiter = env.DISABLE_RATE_LIMITS
+  ? passThrough
+  : rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   store: loginStore,
@@ -24,7 +32,9 @@ export const loginLimiter = rateLimit({
 });
 
 /** Draw endpoints: 30 / min (02 §1). */
-export const drawLimiter = rateLimit({
+export const drawLimiter = env.DISABLE_RATE_LIMITS
+  ? passThrough
+  : rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
   store: drawStore,
@@ -36,7 +46,9 @@ export const drawLimiter = rateLimit({
 });
 
 /** Everything else: generous. */
-export const generalLimiter = rateLimit({
+export const generalLimiter = env.DISABLE_RATE_LIMITS
+  ? passThrough
+  : rateLimit({
   windowMs: 60 * 1000,
   limit: 300,
   store: generalStore,

@@ -20,6 +20,8 @@ export const env = {
   WEB_ORIGIN: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
   APP_URL: process.env.APP_URL ?? 'http://localhost:5173',
   DEFAULT_COUNTRY_CODE: process.env.DEFAULT_COUNTRY_CODE ?? '91',
+  /** Test-only: E2E disables rate limiters (they are covered by API tests). */
+  DISABLE_RATE_LIMITS: process.env.DISABLE_RATE_LIMITS === '1',
   isProd: (process.env.NODE_ENV ?? 'development') === 'production',
 };
 

@@ -143,4 +143,70 @@
   CardGrid/NumberGrid kept isolated and prop-driven instead).
 - NOT done: Playwright E2E incl. 3-window/tie/undo/refresh proof (Phase 5),
   compose-up proof, backup, full README, sign-off (Phase 5).
-## Phase 5 — (pending)
+## Phase 5 — E2E, Docker, backup, README, sign-off (done, verified)
+- E2E (Playwright + headless Chromium, `npm run test:e2e`):
+  - `e2e/full-game.spec.ts` PASSES (27s): 110 players, mixed manual+random draws
+    to first completion across admin/public/player windows; views agree every
+    10th draw; modal appears, public hidden until confirm, banner after.
+  - `e2e/tie-undo-refresh.spec.ts` PASSES (4s): forced tie → modal shows both
+    names → public hidden → confirm → banner shows both; UI draw → UI undo →
+    un-marked everywhere → redraw (seq continues); player reload restores state.
+  - Re-verified 2026-10-13: 2/2 green (39.8s) against fresh `lotto_e2e` DB with
+    dev servers stopped (ports freed for the E2E-owned servers); dev restarted
+    afterwards (`/api/v1/health` ok, web 200).
+  - Test env: `DISABLE_RATE_LIMITS=1` for E2E only (limits covered by API tests);
+    added to `.env.example` as a commented warning (never set in real use).
+- Real bugs found BY the E2E and fixed:
+  1. `web/src/api/client.ts` spread `...init` last, dropping Content-Type on
+     requests with extra headers (Idempotency-Key) → 422 on UI draws. Fixed by
+     merging headers properly.
+  2. `web/vite.config.ts` did not proxy `/socket.io` → sockets dead in dev
+     (“Reconnecting…”). Fixed (ws:true). `web/nginx.conf` covers prod parity.
+  3. Player login searched ALL games → cross-game loginId collision broke login
+     once 2+ games exist. Fixed: login scoped to current game (one active game
+     per spec). API tests unaffected (one game per test).
+  4. E2E helper URL regex matched `/admin/login` itself — exact-URL asserts now.
+- `scripts/backup.mjs` (`npm run backup [dir]`): pure-mongoose JSON dump;
+  verified against live DB (431KB, all collections).
+- NOTE: during Phase 5 the tree received concurrent external edits (Dockerfiles
+  → root-context builds + `npm ci` + explicit shared build, `web/nginx.conf`
+  with /api+/socket.io proxy + SPA fallback, drawService redundant me:update
+  removal, +2 socket isolation/gap tests). Reviewed: all beneficial and
+  consistent; kept. Socket suite now 4 tests, server total 52 — all green.
+- Phase 5 completion pass (2026-10-13):
+  - Coverage gate (05 §8): installed `@vitest/coverage-v8@2.1.9` (pinned to
+    vitest 2.1.9) as devDep in shared+server. `progress.ts` 100% lines,
+    `winRules.ts` 92.06% lines, `cardGenerator.ts` 96.96% lines — all ≥ 90%.
+    Added 3 gap tests (`INVALID_MAX_OVERLAP`, tight-cap repair, small-space
+    uniqueness fix). Remaining ~3% uncovered = fail-loudly retry-exhaustion
+    branches (deliberately hard to trigger fast; a 12-player/C(5,3) probe
+    confirmed retry-storm cost, so no test pins them — fail-loudly design
+    reviewed instead).
+  - Full `npm test`: shared 20 + server 55 + web 1, ALL pass.
+  - Docker: `docker compose build` green for both images; `docker compose
+    config` valid. Full-stack proof ran the built images (`lotto-spec-server`,
+    `lotto-spec-web`, `mongo:7`) with an isolated project/ports file (host
+    27017 here is taken by an unrelated container, so only the mongo HOST port
+    moved to 27018 — container networking identical): server health ok direct
+    AND via nginx `/api` proxy, web 200; torn down with `down -v` afterwards.
+    Committed `docker-compose.yml` itself unchanged.
+  - OpenAPI (`docs/openapi.yaml`, 319 lines) matches routes: every
+    `server/src/routes/*.ts` handler has a path entry (health/auth ×4/
+    public board/me ×2/admin game+cards ×6/players ×8/draws ×4/status/
+    verify-claim/wins ×2/standings/cards.zip/credentials ×2/audit + PNG
+    image routes). Error shape `{error:{code,message,details}}` with stable codes.
+  - 05 §8 sign-off: `npm test` ✓; coverage ≥90% on the three modules ✓;
+    Playwright incl. tie+undo ✓; openapi matches ✓; compose up ✓ (see note);
+    README (setup/env/runbook/local-network/troubleshooting) ✓; no secrets
+    committed (`.env` gitignored, `.env.example` complete incl.
+    DISABLE_RATE_LIMITS warning + JWT_EXPIRES_IN row in README) ✓;
+    02 §10 security (helmet/CORS/lockout/generic errors/rate limits) ✓ via
+    api.test.ts (lockout + 429 tests); 04 §8–9 a11y/responsive ✓ via
+    MANUAL_TEST.md + E2E (360px player page, projector board, ✓ ring + bold,
+    reduced-motion, aria labels).
+  - Edge cases (05 §7): every row mapped in `docs/EDGE_CASES.md`; automated
+    rows green in `npm test`/`test:e2e`; operator rows (projector legibility,
+    WhatsApp on-phone flow, kill-server restart, slow-3G resync, 5-PNG visual
+    check) are in `docs/MANUAL_TEST.md` for the admin rehearsal — NOT
+    machine-verified here, must be done before the real event.
+- NOT done (by design): Flutter app (Phase 6, starts only after this sign-off).

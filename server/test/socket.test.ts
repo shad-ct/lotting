@@ -120,4 +120,74 @@ describe('sockets (05 §4)', () => {
       adm.disconnect();
     }
   });
+
+  it('a player socket cannot receive another player room events or admin events', async () => {
+    const { creds, admin } = await bootstrapGame({ playerCount: 3 });
+    const pt0 = await playerToken(creds[0].loginId, creds[0].pin);
+    const pt1 = await playerToken(creds[1].loginId, creds[1].pin);
+
+    const pl0 = await connect(pt0);
+    const pl1 = await connect(pt1);
+    try {
+      // Track leaked events on player 0
+      let adminSnapshotLeaked = 0;
+      let winDetectedLeaked = 0;
+      const meUpdates0: unknown[] = [];
+      const meUpdates1: unknown[] = [];
+      pl0.on('admin:snapshot', () => adminSnapshotLeaked++);
+      pl0.on('win:detected', () => winDetectedLeaked++);
+      pl0.on('me:update', (d: unknown) => meUpdates0.push(d));
+      pl1.on('me:update', (d: unknown) => meUpdates1.push(d));
+
+      // Draw a number — both players get their OWN me:update
+      await api.post('/api/v1/admin/draws').set(auth(admin)).send({ number: 1 });
+      await new Promise((r) => setTimeout(r, 1000));
+
+      // Each player should only get their own me:update, never admin events
+      expect(meUpdates0.length).toBeGreaterThanOrEqual(1);
+      expect(meUpdates1.length).toBeGreaterThanOrEqual(1);
+      expect(adminSnapshotLeaked).toBe(0);
+      expect(winDetectedLeaked).toBe(0);
+    } finally {
+      pl0.disconnect();
+      pl1.disconnect();
+    }
+  });
+
+  it('every draw payload carries drawCount and lastSeq for gap detection', async () => {
+    const { creds, admin } = await bootstrapGame({ playerCount: 3 });
+    const pt0 = await playerToken(creds[0].loginId, creds[0].pin);
+    const pub = await connect();
+    const pl0 = await connect(pt0);
+    try {
+      const drawPayloads: { seq: number; drawCount: number; lastSeq: number }[] = [];
+      const mePayloads: { drawCount: number; lastSeq: number }[] = [];
+      pub.on('draw:new', (d: { seq: number; drawCount: number; lastSeq: number }) => drawPayloads.push(d));
+      pl0.on('me:update', (d: { drawCount: number; lastSeq: number }) => mePayloads.push(d));
+
+      // Three consecutive draws
+      for (const n of [1, 2, 3]) {
+        await api.post('/api/v1/admin/draws').set(auth(admin)).send({ number: n });
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // draw:new payloads must have monotonically increasing seq and drawCount
+      expect(drawPayloads.length).toBe(3);
+      for (let i = 0; i < drawPayloads.length; i++) {
+        expect(drawPayloads[i].seq).toBe(i + 1);
+        expect(drawPayloads[i].drawCount).toBe(i + 1);
+        expect(drawPayloads[i].lastSeq).toBe(i + 1);
+      }
+
+      // me:update payloads also carry drawCount + lastSeq
+      expect(mePayloads.length).toBe(3);
+      for (let i = 0; i < mePayloads.length; i++) {
+        expect(mePayloads[i].drawCount).toBe(i + 1);
+        expect(mePayloads[i].lastSeq).toBe(i + 1);
+      }
+    } finally {
+      pub.disconnect();
+      pl0.disconnect();
+    }
+  });
 });
