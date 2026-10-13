@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { generalLimiter } from './middleware/rateLimit.js';
 import { optionalAuth } from './middleware/auth.js';
 import adminDraws from './routes/adminDraws.js';
+import adminExport from './routes/adminExport.js';
 import adminGame from './routes/adminGame.js';
 import adminPlayers from './routes/adminPlayers.js';
 import adminStatus from './routes/adminStatus.js';
@@ -38,6 +39,7 @@ export function createApp(): express.Express {
   app.use('/api/v1/public', pub);
   app.use('/api/v1/me', me);
   app.use('/api/v1/admin', adminGame);
+  app.use('/api/v1/admin', adminExport);
   app.use('/api/v1/admin', adminPlayers);
   app.use('/api/v1/admin', adminDraws);
   app.use('/api/v1/admin', adminStatus);

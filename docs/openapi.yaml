@@ -284,6 +284,34 @@ paths:
       summary: Rank table as CSV
       responses:
         '200': { description: CSV file }
+  /me/card/image:
+    get:
+      summary: Own card PNG (?marked=1 for live marks)
+      responses:
+        '200': { description: PNG image }
+        '403': { description: Wrong role }
+  /admin/players/{id}/card.png:
+    get:
+      summary: One player's card PNG (admin)
+      responses:
+        '200': { description: PNG image }
+  /admin/export/cards.zip:
+    get:
+      summary: Streamed ZIP of all card PNGs (status >= ready)
+      responses:
+        '200': { description: ZIP file }
+  /admin/export/credentials.csv:
+    get:
+      summary: One-time credentials CSV (410 after the 15-minute window)
+      responses:
+        '200': { description: CSV file }
+        '410': { description: PIN window expired }
+  /admin/export/credentials.print:
+    get:
+      summary: Printable credential slips (same one-time rule)
+      responses:
+        '200': { description: HTML page }
+        '410': { description: PIN window expired }
   /admin/audit:
     get:
       summary: Audit log (latest 500)

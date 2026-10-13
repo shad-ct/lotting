@@ -89,6 +89,32 @@
 - NOT done: card PNG/ZIP/CSV/print endpoints (Phase 3), frontend (Phase 4),
   E2E/Docker-proof/README (Phase 5).
 - Cut / deferred: none.
-## Phase 3 — (pending)
+## Phase 3 — Card images, exports, WhatsApp (done, verified)
+- Deps: @napi-rs/canvas; fonts bundled at server/assets/fonts (Noto Sans +
+  Noto Sans Malayalam variable TTFs, OFL) registered under LottoNoto/LottoNotoML
+  aliases — verified rendering even with unique aliases so Docker (no system
+  fonts) works. System already ships Noto Malayalam here, but we do NOT rely on it.
+- `cardImage/theme.ts` (all constants), `renderCard.ts` (pure, deterministic —
+  byte-identical test passes; 1080×1350; header band, CARD #serial, auto-fit
+  name (shrink-then-ellipsis), 4×4 rounded cells, footer with verifyCode +
+  Login ID (never PIN) + app URL + `n/16 marked`), `renderZip.ts` (hand-rolled
+  deterministic stored-ZIP streamer — archiver dropped, its @types had no
+  factory export), `whatsapp.ts` (editable-template fill, wa.me link, null when
+  phoneless). Unmarked cache keyed verifyCode+themeVersion.
+- Routes: admin single PNG (?marked, ?download w/ sanitized name), player own
+  PNG, ZIP (status ≥ ready), credentials.csv + credentials.print behind the
+  15-min in-memory PIN window (410 PINS_NO_LONGER_AVAILABLE after), sent-flags
+  from Phase 2. OpenAPI extended.
+- Fixed from visual review: grid overflowed 1350px (cells now fit-computed +
+  centered), ✓ glyph was tofu (hand-drawn tick), name/grid overlap (fixed
+  block positions), clipped progress line. Spot-checked normal/long/Malayalam/
+  marked PNGs by eye — all correct, incl. Malayalam with no boxes.
+- Verified: server 50 tests pass (6 files); 110 PNGs render well under 30s;
+  pixel-level marked test proves grayscale-visible marking (accent lum <120 vs
+  gray >180); ZIP central-directory parsed → 110 unique safe names; 403
+  cross-player; `tsc` OK; eslint 0 errors.
+- 03 §7 all 7 items pass. Deviations: (1) no QR code in footer (spec: optional).
+  (2) ZIP is stored/uncompressed (deterministic, fast; ~110×~100KB fine).
+- NOT done: frontend (Phase 4), E2E/Docker-proof/README (Phase 5).
 ## Phase 4 — (pending)
 ## Phase 5 — (pending)
