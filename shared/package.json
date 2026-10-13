@@ -1,0 +1,20 @@
+{
+  "name": "@lotto/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./constants.ts",
+  "types": "./constants.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.3"
+  }
+}

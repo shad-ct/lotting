@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: lotto-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - lotto-mongo-data:/data/db
+
+  server:
+    build: ./server
+    container_name: lotto-server
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/lotto
+      PORT: "3001"
+
+  web:
+    build: ./web
+    container_name: lotto-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "5173:80"
+
+volumes:
+  lotto-mongo-data:
