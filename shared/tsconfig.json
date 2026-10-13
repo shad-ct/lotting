@@ -1,13 +1,15 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "noEmit": true,
-    "types": ["vitest/globals", "node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
     "rootDir": ".",
-    "baseUrl": "."
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmit": false
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["./constants.ts", "./types.ts", "./credentials.ts", "./winRules.ts", "./progress.ts", "./schemas.ts"],
+  "exclude": ["node_modules", "dist", "./*.test.ts"]
 }

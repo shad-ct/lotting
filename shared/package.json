@@ -3,11 +3,40 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./constants.ts",
-  "types": "./constants.ts",
+  "main": "./dist/constants.js",
+  "types": "./dist/constants.d.ts",
+  "exports": {
+    "./constants.js": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./types.js": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./credentials.js": {
+      "types": "./dist/credentials.d.ts",
+      "default": "./dist/credentials.js"
+    },
+    "./winRules.js": {
+      "types": "./dist/winRules.d.ts",
+      "default": "./dist/winRules.js"
+    },
+    "./progress.js": {
+      "types": "./dist/progress.d.ts",
+      "default": "./dist/progress.js"
+    },
+    "./schemas.js": {
+      "types": "./dist/schemas.d.ts",
+      "default": "./dist/schemas.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "vitest run",
-    "build": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
     "lint": "eslint ."
   },
   "dependencies": {
