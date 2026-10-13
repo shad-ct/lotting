@@ -116,5 +116,31 @@
 - 03 §7 all 7 items pass. Deviations: (1) no QR code in footer (spec: optional).
   (2) ZIP is stored/uncompressed (deterministic, fast; ~110×~100KB fine).
 - NOT done: frontend (Phase 4), E2E/Docker-proof/README (Phase 5).
-## Phase 4 — (pending)
+## Phase 4 — Frontend (done, verified to gate; live 3-window check = Phase 5 E2E)
+- Stack: Tailwind v3 + hand-rolled shadcn-style primitives (button/input/dialog/
+  badge via cva+clsx+tailwind-merge, lucide-react installed) — full shadcn CLI
+  scaffold deferred (same look, less codegen). TanStack Query owns server state;
+  `useLiveSync()` owns the socket, reconnect + gap refetch (lastSeq jump → full
+  resync), exposes LiveDot state.
+- Order per Prompt 4: (1) PublicBoard + MyCard + logins, (2) DrawConsole +
+  AdminLogin, (3) AdminDashboard (stats, leaderboard, WinnerModal w/ verify +
+  confirm/reject, hot numbers, close-to-win, histogram, searchable/sortable/
+  filterable 110-row table with expandable CardGrid + detail links),
+  (4) Setup 6-step stepper + Players CRUD/CSV/placeholders + PlayerDetail
+  (timeline, PIN reset, PNG) + Distribution (PNG ⬇, Web Share w/ fallback,
+  wa.me text, sent checkboxes, ZIP/CSV/print, counters, filters, preview modal),
+  (5) LogPage (struck-through undone + audit + standings CSV) + polish
+  (MiniDrawBox in admin header, 403 screens, route guards, reduced-motion,
+  tabular nums, aria labels, no colour-alone marking — ✓ ring + bold).
+- Verified: `tsc --noEmit web` OK; `vite build` OK (328KB JS/99KB gzip);
+  eslint clean; live smoke vs real server+mongo: full setup→lock→start→draw→
+  board→player-card flow incl. Malayalam name marked live + 403 wrong-role;
+  preview serves /, /my-card, /admin/draw (200). Manual script: docs/MANUAL_TEST.md.
+- Deviations: (1) public-board sound toggle present, TTS omitted (spec: optional).
+  (2) confetti omitted (spec: optional). (3) connected-viewers count omitted
+  (spec: optional). (4) CSV import via textarea/JSON, not file-multipart
+  (same validation semantics). (5) No Storybook (pure presentational
+  CardGrid/NumberGrid kept isolated and prop-driven instead).
+- NOT done: Playwright E2E incl. 3-window/tie/undo/refresh proof (Phase 5),
+  compose-up proof, backup, full README, sign-off (Phase 5).
 ## Phase 5 — (pending)
