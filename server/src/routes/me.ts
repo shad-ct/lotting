@@ -3,6 +3,7 @@ import { rankBucket } from '@lotto/shared/types.js';
 import { Card } from '../models/Card.js';
 import { Draw } from '../models/Draw.js';
 import { Player } from '../models/Player.js';
+import { WinEvent } from '../models/WinEvent.js';
 import { requirePlayer } from '../middleware/auth.js';
 import { renderCard, renderUnmarkedCached } from '../services/cardImage/renderCard.js';
 import { getProgress } from '../services/progressService.js';
@@ -27,6 +28,14 @@ router.get('/card', requirePlayer, async (req, res, next) => {
     if (!me) throw err('CARD_NOT_READY', 'Card not generated yet', 409);
 
     const totalPlayers = progress.players.length;
+    // Confirmed winners (if any) — same public info as the board banner,
+    // so every logged-in player sees who won.
+    const confirmed = await WinEvent.find({ gameId, status: 'confirmed' }).select('playerIds').lean();
+    const winnerIds = confirmed.flatMap((e) => e.playerIds.map(String));
+    const winners =
+      winnerIds.length > 0
+        ? await Player.find({ _id: { $in: winnerIds } }).select('serial name').lean()
+        : [];
     res.json({
       serial: player.serial,
       name: player.name,
@@ -40,6 +49,7 @@ router.get('/card', requirePlayer, async (req, res, next) => {
       totalPlayers,
       isWinner: me.completedAtSeq != null,
       completedAtSeq: me.completedAtSeq,
+      winners: winners.map((w) => ({ serial: w.serial, name: w.name })),
     });
   } catch (e) {
     next(e);

@@ -29,14 +29,31 @@ export function LastDrawnPanel({ seq, number }: { seq: number | null; number: nu
 export function Histogram({ data }: { data: Record<string, number> }) {
   const max = Math.max(1, ...Object.values(data));
   const keys = Object.keys(data).map(Number).sort((a, b) => a - b);
+  const ticks = [...new Set([max, Math.round((max * 2) / 3), Math.round(max / 3), 0])].sort((a, b) => b - a);
   return (
-    <div className="flex items-end gap-1" role="img" aria-label="Marks histogram">
-      {keys.map((k) => (
-        <div key={k} className="flex flex-1 flex-col items-center gap-1" title={`${data[String(k)]} players at ${k}`}>
-          <div className="w-full rounded-sm bg-lime-400/80" style={{ height: `${Math.max(3, (data[String(k)] / max) * 80)}px` }} />
-          <span className="tnum text-[10px] text-neutral-500">{k}</span>
+    <div role="img" aria-label={`Marks histogram, up to ${max} players at one mark count`}>
+      <div className="flex gap-1">
+        <div className="flex h-[80px] w-6 flex-col justify-between text-right" aria-hidden="true">
+          {ticks.map((t) => (
+            <span key={t} className="tnum text-[10px] leading-none text-neutral-500">{t}</span>
+          ))}
         </div>
-      ))}
+        <div className="flex h-[80px] flex-1 items-end gap-1">
+          {keys.map((k) => (
+            <div key={k} className="flex h-full flex-1 items-end" title={`${data[String(k)]} players at ${k}`}>
+              <div className="w-full rounded-sm bg-lime-400/80" style={{ height: `${Math.max(3, (data[String(k)] / max) * 80)}px` }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <div className="w-6" aria-hidden="true" />
+        <div className="flex flex-1 gap-1">
+          {keys.map((k) => (
+            <span key={k} className="tnum flex-1 text-center text-[10px] text-neutral-500">{k}</span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

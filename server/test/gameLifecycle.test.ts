@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { api, auth, adminToken, resetDb, startMemoryDb, stopMemoryDb } from './helpers.js';
+import { api, auth, adminToken, playerToken, resetDb, startMemoryDb, stopMemoryDb } from './helpers.js';
 
 beforeAll(startMemoryDb);
 afterAll(stopMemoryDb);
@@ -38,5 +38,34 @@ describe('game lifecycle (post-game restart / new game)', () => {
     await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'G', playerCount: 1 });
     expect((await api.post('/api/v1/admin/game/finish').set(auth(admin))).status).toBe(409);
     expect((await api.post('/api/v1/admin/game/reopen').set(auth(admin)).send({ confirm: true })).status).toBe(409);
+  });
+
+  it('confirmed winners appear in /me/card (empty before any win)', async () => {
+    const admin = await adminToken();
+    expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'W', playerCount: 1, cardSize: 2, maxNumber: 3 })).status).toBe(201);
+    const imp = await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Solo' }]);
+    expect(imp.status).toBe(201);
+    const creds = await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin));
+    const { loginId, pin } = (creds.body as { items: { loginId: string; pin: string }[] }).items[0];
+    await api.post('/api/v1/admin/cards/generate').set(auth(admin));
+    await api.post('/api/v1/admin/cards/lock').set(auth(admin));
+    await api.post('/api/v1/admin/game/start').set(auth(admin));
+
+    const pt = await playerToken(loginId, pin);
+    const before = await api.get('/api/v1/me/card').set(auth(pt));
+    expect(before.status).toBe(200);
+    expect((before.body as { winners: unknown[] }).winners).toEqual([]);
+
+    for (const n of [1, 2, 3]) {
+      await api.post('/api/v1/admin/draws').set(auth(admin)).send({ number: n });
+    }
+    const status = await api.get('/api/v1/admin/status').set(auth(admin));
+    const detected = (status.body as { winners: { detected: { id: string }[] } }).winners.detected;
+    expect(detected.length).toBeGreaterThan(0);
+    expect((await api.post(`/api/v1/admin/wins/${detected[0].id}/confirm`).set(auth(admin))).status).toBe(200);
+
+    const after = await api.get('/api/v1/me/card').set(auth(pt));
+    expect(after.status).toBe(200);
+    expect((after.body as { winners: { serial: number; name: string }[] }).winners).toEqual([{ serial: 1, name: 'Solo' }]);
   });
 });

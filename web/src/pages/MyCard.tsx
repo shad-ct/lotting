@@ -41,6 +41,15 @@ export function MyCard() {
         </div>
       </header>
 
+      {data.winners.length > 0 && (
+        <div className="mt-3 rounded-xl border border-lime-700 bg-lime-950 p-3 text-center" role="status">
+          <p className="text-lg font-black text-lime-300">🏆 {data.winners.length > 1 ? 'Winners' : 'Winner'}</p>
+          <p className="tnum mt-1 text-sm font-bold text-lime-100">
+            {data.winners.map((w) => `${w.name} (#${String(w.serial).padStart(3, '0')})`).join(' · ')}
+          </p>
+        </div>
+      )}
+
       <div className="mt-4">
         <CardGrid grid={data.grid} marked={markedSet} size="lg" />
       </div>

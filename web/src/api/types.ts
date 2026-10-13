@@ -20,6 +20,7 @@ export interface MyCardData {
   totalPlayers: number;
   isWinner: boolean;
   completedAtSeq: number | null;
+  winners: { serial: number; name: string }[];
 }
 
 export interface StatusPlayer {
