@@ -40,6 +40,30 @@ describe('game lifecycle (post-game restart / new game)', () => {
     expect((await api.post('/api/v1/admin/game/reopen').set(auth(admin)).send({ confirm: true })).status).toBe(409);
   });
 
+  it('wipe deletes everything and returns the game to empty setup', async () => {
+    const admin = await adminToken();
+    expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Wipe Me', playerCount: 2 })).status).toBe(201);
+    await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'A' }, { name: 'B' }]);
+    await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin));
+    await api.post('/api/v1/admin/cards/generate').set(auth(admin));
+
+    const wrong = await api.post('/api/v1/admin/game/wipe').set(auth(admin)).send({ confirm: 'RESET' });
+    expect(wrong.status).toBe(422);
+    const wiped = await api.post('/api/v1/admin/game/wipe').set(auth(admin)).send({ confirm: 'WIPE' });
+    expect(wiped.status).toBe(200);
+
+    const game = await api.get('/api/v1/admin/game').set(auth(admin));
+    expect((game.body as { status: string }).status).toBe('setup');
+    const players = await api.get('/api/v1/admin/players').set(auth(admin));
+    expect((players.body as { total: number }).total).toBe(0);
+    const audit = await api.get('/api/v1/admin/audit').set(auth(admin));
+    expect((audit.body as { items: { action: string }[] }).items.some((a) => a.action === 'wipe')).toBe(true);
+
+    // Game is usable again from scratch.
+    const re = await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Fresh' }]);
+    expect(re.status).toBe(201);
+  });
+
   it('confirmed winners appear in /me/card (empty before any win)', async () => {
     const admin = await adminToken();
     expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'W', playerCount: 1, cardSize: 2, maxNumber: 3 })).status).toBe(201);

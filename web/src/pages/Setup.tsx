@@ -29,6 +29,7 @@ export function Setup() {
   const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'reopen'>(null);
   const [nextName, setNextName] = useState('Onam Lotto 2026');
   const [resetText, setResetText] = useState('');
+  const [wipeText, setWipeText] = useState('');
 
   const refresh = () => {
     void qc.invalidateQueries();
@@ -187,6 +188,31 @@ export function Setup() {
                   Reset game (keeps players/cards/PINs)
                 </button>
               </form>
+            <form
+              className="mt-3 flex flex-wrap items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setMsg('');
+                apiFetch('/api/v1/admin/game/wipe', { method: 'POST', body: JSON.stringify({ confirm: 'WIPE' }) })
+                  .then(() => {
+                    setWipeText('');
+                    refresh();
+                  })
+                  .catch((er: unknown) => setMsg(friendlyMessage(er)));
+              }}
+            >
+              <input
+                value={wipeText}
+                onChange={(e) => setWipeText(e.target.value)}
+                placeholder="Type WIPE to delete EVERYTHING in this game"
+                aria-label="Type WIPE to confirm full wipe"
+                className="w-64 rounded-lg border border-red-800 bg-neutral-900 p-2 text-sm"
+              />
+              <button type="submit" disabled={wipeText !== 'WIPE'} className="rounded-lg bg-red-700 px-3 py-1.5 text-sm font-bold text-white disabled:opacity-40">
+                Wipe everything (players, cards, PINs, draws, wins)
+              </button>
+            </form>
+            <p className="mt-1 text-xs text-neutral-500">Wipe cannot be undone. Works in any status — the game returns to empty setup.</p>
             <form
               className="mt-3 flex flex-wrap items-center gap-2"
               onSubmit={(e) => {

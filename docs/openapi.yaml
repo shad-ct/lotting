@@ -216,6 +216,11 @@ paths:
       summary: Rehearsal reset (requires {confirm: "RESET"})
       responses:
         '200': { description: Reset to ready }
+  /admin/game/wipe:
+    post:
+      summary: Full wipe, deletes everything in the game (requires {confirm: "WIPE"})
+      responses:
+        '200': { description: Wiped back to empty setup }
   /admin/draws:
     post:
       summary: Manual draw {number}. Optional Idempotency-Key header.

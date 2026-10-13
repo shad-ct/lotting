@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   confirmResetSchema,
   confirmTrueSchema,
+  confirmWipeSchema,
   createGameSchema,
   updateGameSchema,
 } from '@lotto/shared/schemas.js';
@@ -11,7 +12,7 @@ import { validateBody } from '../middleware/validate.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { Game } from '../models/Game.js';
 import { env } from '../config/env.js';
-import { finishGame, generateCardsForGame, lockCards, reopenGame, resetGame, startGame } from '../services/gameService.js';
+import { finishGame, generateCardsForGame, lockCards, reopenGame, resetGame, startGame, wipeGame } from '../services/gameService.js';
 import { bus } from '../services/events.js';
 import { getCurrentGame } from '../services/progressService.js';
 import { err } from '../utils/errors.js';
@@ -158,6 +159,16 @@ router.post('/game/reset', validateBody(confirmResetSchema), requireGame, async 
   try {
     await resetGame(req.game!);
     res.json({ ok: true, status: 'ready' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Full wipe — typed confirmation "WIPE". Deletes everything in this game. */
+router.post('/game/wipe', validateBody(confirmWipeSchema), requireGame, async (req, res, next) => {
+  try {
+    await wipeGame(req.game!);
+    res.json({ ok: true, status: 'setup' });
   } catch (e) {
     next(e);
   }

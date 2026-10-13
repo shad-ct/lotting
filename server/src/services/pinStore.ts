@@ -39,6 +39,11 @@ export function getPin(gameId: string, playerId: string): string | null {
   return getPins(gameId)?.get(playerId) ?? null;
 }
 
+/** Drop one game's PIN window (used by full wipe). */
+export function clearPins(gameId: string): void {
+  windows.delete(gameId);
+}
+
 /** Test hook: force-expire a window. */
 export function _expireWindow(gameId: string): void {
   const w = windows.get(gameId);

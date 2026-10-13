@@ -12,7 +12,7 @@ import { err } from '../utils/errors.js';
 import { bus } from './events.js';
 import { assertRegenerable, clearCards, persistGeneratedCards } from './cardPersistence.js';
 import { generateCards, newSeed } from './cardGenerator.js';
-import { addPin, getPins, storePins } from './pinStore.js';
+import { addPin, clearPins, getPins, storePins } from './pinStore.js';
 import { env } from '../config/env.js';
 
 /** Parse a `name,phone` CSV body into [{name, phone}]. */
@@ -221,5 +221,28 @@ export async function resetGame(game: GameDoc): Promise<void> {
   await game.save();
   await AuditLog.create({ gameId, actor: 'admin', action: 'reset', payload: {} });
   bus.emit('domain', { type: 'game:status', gameId: String(gameId), status: 'ready' });
+  bus.emit('domain', { type: 'admin:snapshot', gameId: String(gameId) });
+}
+
+/**
+ * Full wipe: deletes EVERYTHING under this game (players, cards, PINs, draws,
+ * wins) and returns it to empty setup. Allowed in any status — the typed
+ * WIPE confirmation is the guard. Audit keeps one 'wipe' entry as the trail.
+ */
+export async function wipeGame(game: GameDoc): Promise<void> {
+  const gameId = game._id as Types.ObjectId;
+  await Draw.deleteMany({ gameId });
+  await WinEvent.deleteMany({ gameId });
+  await Card.deleteMany({ gameId });
+  await Player.deleteMany({ gameId });
+  clearPins(String(gameId));
+  game.status = 'setup';
+  game.cardsLockedAt = null;
+  game.startedAt = null;
+  game.finishedAt = null;
+  game.generationStats = null;
+  await game.save();
+  await AuditLog.create({ gameId, actor: 'admin', action: 'wipe', payload: {} });
+  bus.emit('domain', { type: 'game:status', gameId: String(gameId), status: 'setup' });
   bus.emit('domain', { type: 'admin:snapshot', gameId: String(gameId) });
 }

@@ -74,6 +74,7 @@ export const sentFlagsSchema = z
   .strict();
 
 export const confirmResetSchema = z.object({ confirm: z.literal('RESET') }).strict();
+export const confirmWipeSchema = z.object({ confirm: z.literal('WIPE') }).strict();
 export const confirmTrueSchema = z.object({ confirm: z.literal(true) }).strict();
 
 export type CreateGameInput = z.infer<typeof createGameSchema>;
