@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CARD_SIZE, MAX_NUMBER, PLAYER_COUNT_DEFAULT } from './constants.js';
+import { CARD_SIZE, MAX_NUMBER, MAX_PLAYERS, PLAYER_COUNT_DEFAULT } from './constants.js';
 
 const winRulesSchema = z
   .object({
@@ -19,7 +19,7 @@ export const createGameSchema = z
     name: z.string().min(1).max(120),
     maxNumber: z.number().int().min(2).max(500).default(MAX_NUMBER),
     cardSize: z.number().int().min(1).max(100).default(CARD_SIZE),
-    playerCount: z.number().int().min(1).max(1000).default(PLAYER_COUNT_DEFAULT),
+    playerCount: z.number().int().min(1).max(MAX_PLAYERS).default(PLAYER_COUNT_DEFAULT),
     winRules: winRulesSchema,
   })
   .strict();

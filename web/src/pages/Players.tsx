@@ -10,15 +10,18 @@ export function Players() {
   const qc = useQueryClient();
   useLiveSync();
   const { data } = useAdminPlayers();
+  const { data: game } = useAdminGame();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [csv, setCsv] = useState('');
   const [msg, setMsg] = useState('');
   const [importReport, setImportReport] = useState('');
   const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null);
+  const total = data?.total ?? 0;
+  const cap = Math.min(game?.playerCount ?? 110, 110);
+  const atCap = total >= cap;
 
-  const refresh = () => void qc.invalidateQueries();
-  const post = (path: string, body?: object) => {
+  const refresh = () => void qc.invalidateQueries();  const post = (path: string, body?: object) => {
     setMsg('');
     apiFetch(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
       .then((r) => {
@@ -42,8 +45,13 @@ export function Players() {
 
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
-      <h1 className="text-2xl font-black">Players ({data?.total ?? 0})</h1>
+      <h1 className="text-2xl font-black">Players ({data?.total ?? 0}{cap != null ? `/${cap}` : ''})</h1>
       {msg && <p className="mt-2 text-sm text-red-400" role="alert">{msg}</p>}
+      {atCap && (
+        <p className="mt-2 rounded-lg border border-yellow-800 bg-yellow-950 p-3 text-sm text-yellow-200" role="alert">
+          Player limit reached ({data?.total}/{cap}) — no more can be added. Delete a player to free a slot.
+        </p>
+      )}
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <form
@@ -55,11 +63,11 @@ export function Players() {
             setPhone('');
           }}
         >
-          <h2 className="text-sm font-bold">Add one</h2>
+          <h2 className="text-sm font-bold">Add one {atCap && <span className="font-normal text-yellow-200">(limit reached)</span>}</h2>
           <div className="mt-2 flex gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm" />
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" aria-label="Phone" className="w-36 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm" />
-            <button type="submit" className="rounded-lg bg-lime-400 px-3 text-sm font-bold text-neutral-950">Add</button>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" disabled={atCap} className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm disabled:opacity-40" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" aria-label="Phone" disabled={atCap} className="w-36 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm disabled:opacity-40" />
+            <button type="submit" disabled={atCap} className="rounded-lg bg-lime-400 px-3 text-sm font-bold text-neutral-950 disabled:opacity-40">Add</button>
           </div>
         </form>
 
@@ -76,9 +84,9 @@ export function Players() {
             }
           }}
         >
-          <h2 className="text-sm font-bold">CSV import <span className="font-normal text-neutral-500">(paste name,phone rows or a JSON array)</span></h2>
-          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder={'Anu,9876543210\nRahul,'} aria-label="CSV input" className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs" />
-          <button type="submit" className="mt-2 rounded-lg border border-neutral-600 px-3 py-1 text-sm">Preview & import</button>
+          <h2 className="text-sm font-bold">CSV import <span className="font-normal text-neutral-500">(paste name,phone rows or a JSON array)</span>{atCap && <span className="font-normal text-yellow-200"> — limit reached</span>}</h2>
+          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder={'Anu,9876543210\nRahul,'} aria-label="CSV input" disabled={atCap} className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs disabled:opacity-40" />
+          <button type="submit" disabled={atCap} className="mt-2 rounded-lg border border-neutral-600 px-3 py-1 text-sm disabled:opacity-40">Preview & import</button>
           {importReport && <pre className="tnum mt-1 max-h-24 overflow-auto text-xs text-neutral-400">{importReport}</pre>}
         </form>
       </div>

@@ -83,8 +83,8 @@ export function Setup() {
 
         <Step n={2} title={`Add players (${total}/${need})`} done={total >= need}>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!game || game.status !== 'setup'} onClick={() => doPost('/api/v1/admin/players/placeholders', { count: Math.max(0, need - total) })} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm disabled:opacity-40">
-              Create {Math.max(0, need - total)} placeholders
+            <button type="button" disabled={!game || game.status !== 'setup' || total >= need} onClick={() => doPost('/api/v1/admin/players/placeholders', { count: Math.max(0, need - total) })} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm disabled:opacity-40">
+              {total >= need ? `Player limit reached (${total}/${need})` : `Create ${Math.max(0, need - total)} placeholders`}
             </button>
             <Link to="/admin/players" className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">Manage players / CSV import</Link>
           </div>
