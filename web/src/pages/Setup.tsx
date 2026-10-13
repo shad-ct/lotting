@@ -60,7 +60,24 @@ export function Setup() {
               <button type="submit" className="rounded-lg bg-lime-400 px-4 font-bold text-neutral-950">Create</button>
             </form>
           ) : (
-            <p className="text-sm text-neutral-400">{game.name} · {game.status} · {game.playerCount} players · {game.maxNumber} numbers · {game.cardSize}/card</p>
+            <div>
+              <p className="text-sm text-neutral-400">{game.name} · {game.status} · {game.playerCount} players · {game.maxNumber} numbers · {game.cardSize}/card</p>
+              {game.status === 'setup' && (
+                <form
+                  className="mt-2 flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setMsg('');
+                    apiFetch('/api/v1/admin/game', { method: 'PATCH', body: JSON.stringify({ name: gameName }) })
+                      .then(refresh)
+                      .catch((er: unknown) => setMsg(friendlyMessage(er)));
+                  }}
+                >
+                  <input value={gameName} onChange={(e) => setGameName(e.target.value)} className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-sm" aria-label="Rename game" placeholder="Rename game" />
+                  <button type="submit" className="rounded-lg border border-neutral-600 px-3 py-1 text-sm">Rename</button>
+                </form>
+              )}
+            </div>
           )}
         </Step>
 
