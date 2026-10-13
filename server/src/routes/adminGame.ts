@@ -12,6 +12,7 @@ import { AuditLog } from '../models/AuditLog.js';
 import { Game } from '../models/Game.js';
 import { env } from '../config/env.js';
 import { finishGame, generateCardsForGame, lockCards, reopenGame, resetGame, startGame } from '../services/gameService.js';
+import { bus } from '../services/events.js';
 import { getCurrentGame } from '../services/progressService.js';
 import { err } from '../utils/errors.js';
 
@@ -80,6 +81,9 @@ router.post('/game', validateBody(createGameSchema), async (req, res, next) => {
       appUrl: env.APP_URL,
       defaultCountryCode: env.DEFAULT_COUNTRY_CODE,
     });
+    // New game becomes the current one everywhere: push clients to resync.
+    bus.emit('domain', { type: 'game:status', gameId: String(game._id), status: 'setup' });
+    bus.emit('domain', { type: 'admin:snapshot', gameId: String(game._id) });
     res.status(201).json(shapeGame(game));
   } catch (e) {
     next(e);

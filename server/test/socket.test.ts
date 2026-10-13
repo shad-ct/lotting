@@ -5,7 +5,7 @@ import { io as ioClient, type Socket } from 'socket.io-client';
 import { createApp } from '../src/app.js';
 import { Player } from '../src/models/Player.js';
 import { attachSockets } from '../src/sockets/index.js';
-import { api, auth, bootstrapGame, playerToken, resetDb, startMemoryDb, stopMemoryDb } from './helpers.js';
+import { api, auth, adminToken, bootstrapGame, playerToken, resetDb, startMemoryDb, stopMemoryDb } from './helpers.js';
 
 let httpServer: ReturnType<typeof createServer>;
 let baseUrl = '';
@@ -188,6 +188,20 @@ describe('sockets (05 §4)', () => {
     } finally {
       pub.disconnect();
       pl0.disconnect();
+    }
+  });
+
+  it('creating a game broadcasts game:status so clients resync to the new game', async () => {
+    const admin = await adminToken();
+    const pub = await connect();
+    try {
+      const status = waitFor<{ status: string }>(pub, 'game:status');
+      const res = await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Fresh', playerCount: 2 });
+      expect(res.status).toBe(201);
+      const payload = await status;
+      expect(payload.status).toBe('setup');
+    } finally {
+      pub.disconnect();
     }
   });
 });

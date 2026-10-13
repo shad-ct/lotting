@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch, friendlyMessage } from '../api/client.js';
 import { useAdminGame, useAdminPlayers } from '../api/hooks.js';
-import { CopyButton, EmptyState } from '../components/grids.js';
+import { ConfirmDialog, CopyButton, EmptyState } from '../components/grids.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
 interface Cred { serial: number; name: string; loginId: string; pin: string }
@@ -26,6 +26,9 @@ export function Setup() {
   const [msg, setMsg] = useState('');
   const [creds, setCreds] = useState<Cred[]>([]);
   const [leaving, setLeaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'reopen'>(null);
+  const [nextName, setNextName] = useState('Onam Lotto 2026');
+  const [resetText, setResetText] = useState('');
 
   const refresh = () => {
     void qc.invalidateQueries();
@@ -145,8 +148,95 @@ export function Setup() {
           {(game?.status === 'live' || game?.status === 'finished') && <p className="mt-1 text-xs text-neutral-500">Status: {game.status}</p>}
         </Step>
 
+        {game && game.status !== 'setup' && (
+          <Step n={7} title="After the event (finish / reset / new game)" done={false}>
+            <div className="flex flex-wrap gap-2">
+              {game.status === 'live' && (
+                <button type="button" onClick={() => setConfirmAction('finish')} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">
+                  Finish game
+                </button>
+              )}
+              {game.status === 'finished' && (
+                <button type="button" onClick={() => setConfirmAction('reopen')} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">
+                  Reopen game (back to live)
+                </button>
+              )}
+            </div>
+            {(game.status === 'ready' || game.status === 'live' || game.status === 'finished') && (
+              <form
+                className="mt-3 flex flex-wrap items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setMsg('');
+                  apiFetch('/api/v1/admin/game/reset', { method: 'POST', body: JSON.stringify({ confirm: 'RESET' }) })
+                    .then(() => {
+                      setResetText('');
+                      refresh();
+                    })
+                    .catch((er: unknown) => setMsg(friendlyMessage(er)));
+                }}
+              >
+                <input
+                  value={resetText}
+                  onChange={(e) => setResetText(e.target.value)}
+                  placeholder='Type RESET to clear draws + wins'
+                  aria-label="Type RESET to confirm"
+                  className="w-64 rounded-lg border border-red-800 bg-neutral-900 p-2 text-sm"
+                />
+                <button type="submit" disabled={resetText !== 'RESET'} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300 disabled:opacity-40">
+                  Reset game (keeps players/cards/PINs)
+                </button>
+              </form>
+            )}
+            <form
+              className="mt-3 flex flex-wrap items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setMsg('');
+                apiFetch('/api/v1/admin/game', { method: 'POST', body: JSON.stringify({ name: nextName }) })
+                  .then(refresh)
+                  .catch((er: unknown) => setMsg(friendlyMessage(er)));
+              }}
+            >
+              <input value={nextName} onChange={(e) => setNextName(e.target.value)} className="w-64 rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-sm" aria-label="New game name" placeholder="New game name" />
+              <button
+                type="submit"
+                disabled={game.status !== 'finished'}
+                title={game.status !== 'finished' ? 'Finish the current game first' : 'Start a fresh game (old data stays archived under its own game)'}
+                className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40"
+              >
+                Start new game
+              </button>
+            </form>
+            {game.status !== 'finished' && (
+              <p className="mt-1 text-xs text-neutral-500">A new game can be created once this one is finished. Past games stay in the database under their own game records.</p>
+            )}
+          </Step>
+        )}
+
         {(!game || game.status === 'setup' || game.status === 'ready') && <EmptyState title="Steps unlock in order" hint="Each step explains what it needs." />}
-      </div>
+      </div>      <ConfirmDialog
+        open={confirmAction === 'finish'}
+        title="Finish the game?"
+        body="The game closes with the current standings. You can still reopen it afterwards."
+        confirmLabel="Finish"
+        onConfirm={() => {
+          setConfirmAction(null);
+          doPost('/api/v1/admin/game/finish');
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'reopen'}
+        title="Reopen the game?"
+        body="The game goes back to live with all draws and confirmed winners intact."
+        confirmLabel="Reopen"
+        onConfirm={() => {
+          setConfirmAction(null);
+          doPost('/api/v1/admin/game/reopen', { confirm: true });
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </main>
   );
 }
