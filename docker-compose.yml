@@ -34,6 +34,8 @@ services:
       - server
     ports:
       - "5173:80"
+    environment:
+      SERVER_UPSTREAM: http://server:3001
 
 volumes:
   lotto-mongo-data:
