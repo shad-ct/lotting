@@ -76,23 +76,6 @@ router.post('/players', requireGame, validateBody(createPlayerSchema), async (re
   }
 });
 
-/** "Create N placeholder players" (01 §3). */
-router.post('/players/placeholders', requireGame, async (req, res, next) => {
-  try {
-    if (req.game!.status !== 'setup') throw err('GAME_LOCKED', 'Players can only be added while in setup', 409);
-    const n = Number((req.body as { count?: unknown })?.count ?? 0);
-    if (!Number.isInteger(n) || n < 1 || n > 1000) throw err('INVALID_NUMBER', 'count must be 1..1000', 422);
-    const existing = await Player.countDocuments({ gameId: req.game!._id });
-    const inputs = Array.from({ length: n }, (_, i) => ({
-      name: `Player ${String(existing + i + 1).padStart(3, '0')}`,
-    }));
-    const result = await addPlayers(req.game!, inputs);
-    res.status(201).json(result);
-  } catch (e) {
-    next(e);
-  }
-});
-
 router.patch('/players/:id', requireGame, validateBody(updatePlayerSchema), async (req, res, next) => {
   try {
     const player = await Player.findOne({ _id: req.params.id, gameId: req.game!._id });

@@ -86,11 +86,9 @@ export function Setup() {
 
         <Step n={2} title={`Add players (${total}/${need})`} done={total >= need}>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!game || game.status !== 'setup' || total >= need} onClick={() => doPost('/api/v1/admin/players/placeholders', { count: Math.max(0, need - total) })} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm disabled:opacity-40">
-              {total >= need ? `Player limit reached (${total}/${need})` : `Create ${Math.max(0, need - total)} placeholders`}
-            </button>
             <Link to="/admin/players" className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">Manage players / CSV import</Link>
           </div>
+          {total >= need && <p className="mt-1 text-xs text-neutral-500">Player limit reached ({total}/{need}).</p>}
         </Step>
 
         <Step n={3} title="Generate credentials (one-time PIN reveal)" done={hasPins}>
@@ -148,7 +146,7 @@ export function Setup() {
           {(game?.status === 'live' || game?.status === 'finished') && <p className="mt-1 text-xs text-neutral-500">Status: {game.status}</p>}
         </Step>
 
-        {game && game.status !== 'setup' && (
+        {game && (
           <Step n={7} title="After the event (finish / reset / new game)" done={false}>
             <div className="flex flex-wrap gap-2">
               {game.status === 'live' && (
@@ -162,9 +160,8 @@ export function Setup() {
                 </button>
               )}
             </div>
-            {(game.status === 'ready' || game.status === 'live' || game.status === 'finished') && (
-              <form
-                className="mt-3 flex flex-wrap items-center gap-2"
+            <form
+              className="mt-3 flex flex-wrap items-center gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
                   setMsg('');
@@ -187,7 +184,6 @@ export function Setup() {
                   Reset game (keeps players/cards/PINs)
                 </button>
               </form>
-            )}
             <form
               className="mt-3 flex flex-wrap items-center gap-2"
               onSubmit={(e) => {

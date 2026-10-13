@@ -53,7 +53,7 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect((await api.patch('/api/v1/admin/game').set(auth(admin)).send({ name: 'Late Rename' })).status).toBe(409);
   });
 
-  it('110 cap: add-one, import and placeholders all stop at the limit', async () => {
+  it('110 cap: add-one and import stop at the limit; placeholders route is gone', async () => {
     const admin = await setupGame(110); // game is full: 110/110
     const one = await api.post('/api/v1/admin/players').set(auth(admin)).send({ name: 'Extra' });
     expect(one.status).toBe(409);
@@ -67,7 +67,7 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect(csv.status).toBe(409);
 
     const ph = await api.post('/api/v1/admin/players/placeholders').set(auth(admin)).send({ count: 1 });
-    expect(ph.status).toBe(409);
+    expect(ph.status).toBe(404);
 
     const after = await api.get('/api/v1/admin/players').set(auth(admin));
     expect((after.body as { total: number }).total).toBe(110);

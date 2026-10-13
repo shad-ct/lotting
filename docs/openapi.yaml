@@ -155,11 +155,6 @@ paths:
       summary: Create one player
       responses:
         '201': { description: Created }
-  /admin/players/placeholders:
-    post:
-      summary: Create N placeholder players
-      responses:
-        '201': { description: Created }
   /admin/players/{id}:
     patch:
       summary: Edit name, phone, loginId, isActive

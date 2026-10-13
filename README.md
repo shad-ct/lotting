@@ -45,7 +45,7 @@ Seeded admin comes from `ADMIN_USERNAME` / `ADMIN_PASSWORD` at first boot.
 ## Running an event (step by step)
 
 1. **Setup → Create game** (name; defaults 110 players / numbers 1–110 / 16 per card).
-2. **Add players**: import `name,phone` CSV (or JSON), one-by-one, or N placeholders.
+2. **Add players**: import `name,phone` CSV (or JSON), or one-by-one.
 3. **Generate PINs**: one-time reveal — **copy/download now**, PINs can't be shown
    again (15-minute window for CSV/print; afterwards use per-player Reset PIN).
 4. **Generate cards**: check stats (each number on exactly 16 cards). Regenerate

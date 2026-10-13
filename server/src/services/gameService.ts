@@ -42,7 +42,7 @@ export async function addPlayers(
 ): Promise<{ created: number; players: { serial: number; loginId: string; name: string }[] }> {
   const gameId = game._id as Types.ObjectId;
   // Hard cap: never more players than the game allows, and never more than
-  // MAX_PLAYERS (110). Covers add-one, CSV/JSON import and placeholders alike.
+  // MAX_PLAYERS (110). Covers add-one and CSV/JSON import alike.
   const cap = Math.min(game.playerCount, MAX_PLAYERS);
   const current = await Player.countDocuments({ gameId });
   if (current + inputs.length > cap) {
