@@ -57,11 +57,12 @@ export function DrawConsole() {
   const live = game?.status === 'live';
 
   const n = Number(input);
+  const maxNum = game?.maxNumber ?? 110;
   const validation =
     input === ''
       ? ''
-      : !Number.isInteger(n) || n < 1 || n > (game?.maxNumber ?? 110)
-        ? '1–110 only'
+      : !Number.isInteger(n) || n < 1 || n > maxNum
+        ? `1–${maxNum} only`
         : drawnSet.has(n)
           ? `Already drawn at draw #${drawnMap.get(n)}`
           : '';
@@ -119,7 +120,7 @@ export function DrawConsole() {
             }}
             inputMode="numeric"
             autoFocus
-            placeholder="1–110"
+            placeholder={`1–${game?.maxNumber ?? 110}`}
             aria-label="Number to draw"
             className="tnum rounded-2xl border border-neutral-700 bg-neutral-900 p-4 text-center text-5xl font-black"
           />

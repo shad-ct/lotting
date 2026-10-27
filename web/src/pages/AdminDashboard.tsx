@@ -35,13 +35,14 @@ export function AdminDashboard() {
         <LiveDot connected={connected} />
       </header>
 
-      <section className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <section className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6">
         {[
           ['Drawn', `${data.drawn.count}`],
           ['Remaining', `${data.drawn.remaining}`],
           ['Last drawn', `${data.drawn.lastDrawn?.number ?? '–'}`],
           ['Status', data.game.status],
           ['Close to win', `${data.closeToWin.length}`],
+          ['Mode', (data.game as { gameMode?: string }).gameMode === 'cross' ? '✚ Cross' : '🏠 Housefull'],
         ].map(([k, v]) => (
           <div key={k} className="rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-center">
             <p className="text-[11px] uppercase tracking-widest text-neutral-500">{k}</p>
@@ -65,15 +66,18 @@ export function AdminDashboard() {
         <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
           <h2 className="font-bold">Leaderboard (top 10)</h2>
           <ol className="mt-2 flex flex-col gap-2">
-            {data.leaderboard.map((p) => (
+            {data.leaderboard.map((p) => {
+              const cardSize = data.game.cardSize ?? 16;
+              return (
               <li key={p.serial}>
                 <div className="flex items-center justify-between text-sm">
                   <span>#{p.rank}{p.isTie ? '=' : ''} <strong>{p.name}</strong> <span className="text-neutral-500">#{String(p.serial).padStart(3, '0')}</span></span>
-                  <span className="tnum">{p.markedCount}/16 · needs {p.remainingCount}</span>
+                  <span className="tnum">{p.markedCount}/{cardSize} · needs {p.remainingCount}</span>
                 </div>
-                <ProgressBar value={p.markedCount} max={16} />
+                <ProgressBar value={p.markedCount} max={cardSize} />
               </li>
-            ))}
+              );
+            })}
           </ol>
         </section>
 
@@ -124,12 +128,14 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
+              {rows.map((p) => {
+                const cardSize = data.game.cardSize ?? 16;
+                return (
                 <Fragment key={p.serial}>
                   <tr className="border-t border-neutral-800">
                     <td className="tnum p-2">{String(p.serial).padStart(3, '0')}</td>
                     <td className="p-2 font-semibold">{p.name}</td>
-                    <td className="tnum p-2">{p.markedCount}/16</td>
+                    <td className="tnum p-2">{p.markedCount}/{cardSize}</td>
                     <td className="tnum p-2">{p.remainingCount}</td>
                     <td className="tnum p-2">#{p.rank}{p.isTie ? ' =' : ''}</td>
                     <td className="p-2">
@@ -150,7 +156,8 @@ export function AdminDashboard() {
                     </tr>
                   )}
                 </Fragment>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -83,6 +83,8 @@ router.get('/status', async (req, res, next) => {
         status: game.status,
         maxNumber: game.maxNumber,
         cardSize: game.cardSize,
+        gameMode: (game as { gameMode?: string }).gameMode ?? 'housefull',
+        maxPrizePlaces: (game as { maxPrizePlaces?: number }).maxPrizePlaces ?? 3,
         startedAt: game.startedAt,
       },
       drawn: {

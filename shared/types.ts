@@ -8,6 +8,8 @@
 
 export type GameStatus = 'setup' | 'ready' | 'live' | 'finished';
 
+export type GameMode = 'housefull' | 'cross';
+
 export interface WinRules {
   fullCard: { enabled: boolean };
   anyRow: { enabled: boolean };
@@ -25,7 +27,18 @@ export const DEFAULT_WIN_RULES: WinRules = {
   fourCorners: { enabled: false },
   diagonals: { enabled: false },
   firstToMarks: { enabled: false, marks: 8 },
-  stopAtFirstFullCard: true,
+  stopAtFirstFullCard: false, // game now continues until maxPrizePlaces confirmed winners
+};
+
+/** Win rules preset for Cross mode (any complete row or column). */
+export const CROSS_WIN_RULES: WinRules = {
+  fullCard: { enabled: false },
+  anyRow: { enabled: true },
+  anyColumn: { enabled: true },
+  fourCorners: { enabled: false },
+  diagonals: { enabled: false },
+  firstToMarks: { enabled: false, marks: 8 },
+  stopAtFirstFullCard: false,
 };
 
 export const DEFAULT_WHATSAPP_TEMPLATE =
@@ -50,6 +63,8 @@ export interface GameConfig {
   cardSize: number;
   playerCount: number;
   winRules: WinRules;
+  gameMode: GameMode;
+  maxPrizePlaces: number;
   showExactRankToPlayers: boolean;
   closeThreshold: number;
   maxOverlap: number | null;

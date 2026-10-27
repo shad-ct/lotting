@@ -20,6 +20,8 @@ export const createGameSchema = z
     maxNumber: z.number().int().min(2).max(500).default(MAX_NUMBER),
     cardSize: z.number().int().min(1).max(100).default(CARD_SIZE),
     playerCount: z.number().int().min(1).max(MAX_PLAYERS).default(PLAYER_COUNT_DEFAULT),
+    gameMode: z.enum(['housefull', 'cross']).default('housefull'),
+    maxPrizePlaces: z.number().int().min(1).max(10).default(3),
     winRules: winRulesSchema,
   })
   .strict();

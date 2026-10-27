@@ -288,7 +288,7 @@ describe('win flow (02 §7)', () => {
     expect(confirm.status).toBe(200);
     board = await api.get('/api/v1/public/board');
     expect(board.body.winners).toHaveLength(2);
-    expect(board.body.game.status).toBe('finished');
+    expect(board.body.game.status).toBe('live');
   });
 
   it('reject path + undo of unconfirmed win withdraws detection', async () => {
@@ -320,6 +320,8 @@ describe('win flow (02 §7)', () => {
     await api.post('/api/v1/admin/draws').set(auth(admin)).send({ number: 7 });
     const win = await api.post('/api/v1/admin/draws').set(auth(admin)).send({ number: 6 });
     await api.post(`/api/v1/admin/wins/${win.body.newWinners[0].eventId}/confirm`).set(auth(admin)).send();
+    const finish = await api.post('/api/v1/admin/game/finish').set(auth(admin)).send();
+    expect(finish.status).toBe(200);
     const undo = await api.post('/api/v1/admin/draws/undo').set(auth(admin)).send();
     expect(undo.status).toBe(409);
     expect(undo.body.error.code).toBe('WINNER_CONFIRMED_REOPEN_FIRST');

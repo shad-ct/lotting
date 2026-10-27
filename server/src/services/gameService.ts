@@ -1,5 +1,5 @@
 import type { Types } from 'mongoose';
-import { MAX_PLAYERS } from '@lotto/shared/constants.js';
+
 import { defaultLoginId, generatePin, normalizePhone } from '@lotto/shared/credentials.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { Card } from '../models/Card.js';
@@ -41,9 +41,9 @@ export async function addPlayers(
   inputs: { name: string; phone?: string | null }[],
 ): Promise<{ created: number; players: { serial: number; loginId: string; name: string }[] }> {
   const gameId = game._id as Types.ObjectId;
-  // Hard cap: never more players than the game allows, and never more than
-  // MAX_PLAYERS (110). Covers add-one and CSV/JSON import alike.
-  const cap = Math.min(game.playerCount, MAX_PLAYERS);
+  // Enforce the game's configured player limit (no product cap anymore —
+  // the card generator handles arbitrary player counts with unique cards).
+  const cap = game.playerCount;
   const current = await Player.countDocuments({ gameId });
   if (current + inputs.length > cap) {
     throw err(

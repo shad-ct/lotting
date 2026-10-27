@@ -50,7 +50,7 @@ export interface WinEventShape {
 }
 
 export interface StatusData {
-  game: { id: string; name: string; status: string; maxNumber: number; cardSize: number; startedAt: string | null };
+  game: { id: string; name: string; status: string; maxNumber: number; cardSize: number; gameMode?: string; maxPrizePlaces?: number; startedAt: string | null };
   drawn: { count: number; remaining: number; lastDrawn: { seq: number; number: number } | null; sequence: number[] };
   players: StatusPlayer[];
   leaderboard: StatusPlayer[];

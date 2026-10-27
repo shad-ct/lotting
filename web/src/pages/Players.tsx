@@ -18,7 +18,7 @@ export function Players() {
   const [importReport, setImportReport] = useState('');
   const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null);
   const total = data?.total ?? 0;
-  const cap = Math.min(game?.playerCount ?? 110, 110);
+  const cap = game?.playerCount ?? 110;
   const atCap = total >= cap;
 
   const refresh = () => void qc.invalidateQueries();  const post = (path: string, body?: object) => {

@@ -210,14 +210,16 @@ export async function confirmWin(gameId: Types.ObjectId, eventId: string): Promi
 
   const game = await Game.findById(gameId);
   let finished = false;
-  if (game) {
-    const rules = (game.winRules ?? {}) as { stopAtFirstFullCard?: boolean };
-    if ((rules.stopAtFirstFullCard ?? true) && ev.rule === 'fullCard' && game.status === 'live') {
+  if (game && game.status === 'live') {
+    // Count all confirmed win events (including the one we just confirmed).
+    const confirmedCount = await WinEvent.countDocuments({ gameId, status: 'confirmed' });
+    const maxPrizePlaces = (game.maxPrizePlaces as number | undefined) ?? 3;
+    if (confirmedCount >= maxPrizePlaces) {
       game.status = 'finished';
       game.finishedAt = new Date();
       await game.save();
       finished = true;
-      await AuditLog.create({ gameId, actor: 'admin', action: 'finish', payload: { reason: 'win-confirmed', eventId } });
+      await AuditLog.create({ gameId, actor: 'admin', action: 'finish', payload: { reason: 'all-prizes-awarded', eventId, confirmedCount } });
     }
   }
   await AuditLog.create({ gameId, actor: 'admin', action: 'confirm_win', payload: { eventId } });

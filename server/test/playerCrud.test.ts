@@ -73,13 +73,17 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect((after.body as { total: number }).total).toBe(110);
   });
 
-  it('small games cap at playerCount; game creation rejects playerCount > 110', async () => {
-    const admin = await setupGame(2);
+  it('small games cap at playerCount; game creation rejects playerCount > 10000', async () => {
+    const admin = await adminToken();
+    const big = await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Too Big', playerCount: 10001 });
+    expect(big.status).toBe(422);
+
+    // Back to the small-game scenario for the playerCount cap check.
+    const g = await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Small', playerCount: 2 });
+    expect(g.status).toBe(201);
+    await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'A' }, { name: 'B' }]);
     const third = await api.post('/api/v1/admin/players').set(auth(admin)).send({ name: 'Third' });
     expect(third.status).toBe(409);
-
-    const big = await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Too Big', playerCount: 111 });
-    expect(big.status).toBe(422);
   });
 
   it('strict step order: PINs need full roster, cards need all PINs', async () => {

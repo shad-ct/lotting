@@ -6,6 +6,7 @@ import {
   createGameSchema,
   updateGameSchema,
 } from '@lotto/shared/schemas.js';
+import { CROSS_WIN_RULES, DEFAULT_WIN_RULES } from '@lotto/shared/types.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { requireGame } from '../middleware/requireGame.js';
 import { validateBody } from '../middleware/validate.js';
@@ -27,6 +28,8 @@ function shapeGame(game: {
   maxNumber: number;
   cardSize: number;
   playerCount: number;
+  gameMode?: string;
+  maxPrizePlaces?: number;
   winRules: unknown;
   cardsLockedAt: unknown;
   startedAt: unknown;
@@ -42,6 +45,8 @@ function shapeGame(game: {
     maxNumber: game.maxNumber,
     cardSize: game.cardSize,
     playerCount: game.playerCount,
+    gameMode: game.gameMode ?? 'housefull',
+    maxPrizePlaces: game.maxPrizePlaces ?? 3,
     winRules: game.winRules,
     cardsLockedAt: game.cardsLockedAt,
     startedAt: game.startedAt,
@@ -69,16 +74,21 @@ router.post('/game', validateBody(createGameSchema), async (req, res, next) => {
     if (latest && latest.status !== 'finished') {
       throw err('GAME_IN_PROGRESS', 'A game is already in progress', 409, { status: latest.status });
     }
-    const body = req.body as { name: string; maxNumber: number; cardSize: number; playerCount: number; winRules?: object };
+  const body = req.body as { name: string; maxNumber: number; cardSize: number; playerCount: number; gameMode?: 'housefull' | 'cross'; maxPrizePlaces?: number; winRules?: object };
     if (body.cardSize > body.maxNumber) {
       throw err('IMPOSSIBLE_CONFIG', 'cardSize cannot exceed maxNumber', 422);
     }
+    // Auto-apply win rules based on game mode (unless caller supplies explicit winRules).
+    const gameMode = body.gameMode ?? 'housefull';
+    const defaultRules = gameMode === 'cross' ? CROSS_WIN_RULES : DEFAULT_WIN_RULES;
     const game = await Game.create({
       name: body.name,
       maxNumber: body.maxNumber,
       cardSize: body.cardSize,
       playerCount: body.playerCount,
-      ...(body.winRules ? { winRules: body.winRules } : {}),
+      gameMode,
+      maxPrizePlaces: body.maxPrizePlaces ?? 3,
+      winRules: body.winRules ? body.winRules : defaultRules,
       appUrl: env.APP_URL,
       defaultCountryCode: env.DEFAULT_COUNTRY_CODE,
     });

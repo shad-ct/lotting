@@ -10,6 +10,8 @@ export interface GameDoc extends mongoose.Document {
   maxNumber: number;
   cardSize: number;
   playerCount: number;
+  gameMode: 'housefull' | 'cross';
+  maxPrizePlaces: number;
   winRules: object;
   cardsLockedAt: Date | null;
   startedAt: Date | null;
@@ -55,6 +57,8 @@ const GameSchema = new Schema<GameDoc>(
     maxNumber: { type: Number, default: MAX_NUMBER },
     cardSize: { type: Number, default: CARD_SIZE },
     playerCount: { type: Number, default: PLAYER_COUNT_DEFAULT },
+    gameMode: { type: String, enum: ['housefull', 'cross'], default: 'housefull' },
+    maxPrizePlaces: { type: Number, default: 3 },
     winRules: { type: WinRulesSchema, default: () => ({ ...DEFAULT_WIN_RULES }) },
     cardsLockedAt: { type: Date, default: null },
     startedAt: { type: Date, default: null },

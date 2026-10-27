@@ -71,16 +71,38 @@ export function WinnerModal({
   const [verifyData, setVerifyData] = useState<{ grid: number[]; drawn: number[]; missing: number[]; valid: boolean; message: string } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   if (events.length === 0) return null;
+
+  const placingMedal = (placing: number) => {
+    if (placing === 1) return '🥇';
+    if (placing === 2) return '🥈';
+    if (placing === 3) return '🥉';
+    return `#${placing}`;
+  };
+
+  const placingLabel = (placing: number) => {
+    if (placing === 1) return '1st Prize';
+    if (placing === 2) return '2nd Prize';
+    if (placing === 3) return '3rd Prize';
+    return `${placing}th Prize`;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="alertdialog" aria-label="Winner detected">
       <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-xl border border-lime-400 bg-neutral-900 p-5">
-        <h2 className="text-xl font-black text-lime-300">🎉 Winner detected</h2>
+        <h2 className="text-xl font-black text-lime-300">🎉 Winner detected — confirm or reject</h2>
         {events.map((e) => (
           <div key={e.id} className="mt-3 rounded-lg border border-neutral-700 p-3">
-            <p className="font-bold">
-              {e.players.map((p) => `${p.name} (#${String(p.serial ?? 0).padStart(3, '0')})`).join(' & ')}
-            </p>
-            <p className="tnum text-sm text-neutral-400">Rule {e.rule} · draw #{e.drawSeq} · placing #{e.placing}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-3xl">{placingMedal(e.placing)}</span>
+              <div>
+                <p className="font-bold">
+                  {e.players.map((p) => `${p.name} (#${String(p.serial ?? 0).padStart(3, '0')})`).join(' & ')}
+                </p>
+                <p className="tnum text-sm text-neutral-400">
+                  {placingLabel(e.placing)} · Rule: {e.rule} · Draw #{e.drawSeq}
+                </p>
+              </div>
+            </div>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"

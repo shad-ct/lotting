@@ -23,6 +23,7 @@ export function Setup() {
   const { data: game } = useAdminGame();
   const { data: players } = useAdminPlayers();
   const [gameName, setGameName] = useState('Onam Lotto 2026');
+  const [gameMode, setGameMode] = useState<'housefull' | 'cross'>('housefull');
   const [msg, setMsg] = useState('');
   const [creds, setCreds] = useState<Cred[]>([]);
   const [leaving, setLeaving] = useState(false);
@@ -42,7 +43,7 @@ export function Setup() {
   };
 
   const total = players?.total ?? 0;
-  const need = game?.playerCount ?? 110;
+  const need = game?.playerCount ?? 0;
   const hasCards = (players?.items.filter((p) => p.hasCard).length ?? 0) >= need && need > 0;
   const hasPins = (players?.items.filter((p) => p.hasPin).length ?? 0) >= need && need > 0;
 
@@ -59,13 +60,52 @@ export function Setup() {
       <div className="mt-4 flex flex-col gap-3">
         <Step n={1} title="Create game" done={!!game}>
           {!game ? (
-            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); doPost('/api/v1/admin/game', { name: gameName }); }}>
-              <input value={gameName} onChange={(e) => setGameName(e.target.value)} className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 p-2" aria-label="Game name" />
-              <button type="submit" className="rounded-lg bg-lime-400 px-4 font-bold text-neutral-950">Create</button>
+            <form
+              className="flex flex-col gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                doPost('/api/v1/admin/game', { name: gameName, gameMode });
+              }}
+            >
+              <div className="flex gap-2">
+                <input value={gameName} onChange={(e) => setGameName(e.target.value)} className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 p-2" aria-label="Game name" />
+                <button type="submit" className="rounded-lg bg-lime-400 px-4 font-bold text-neutral-950">Create</button>
+              </div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-sm text-neutral-400">Mode:</span>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gameMode"
+                    value="housefull"
+                    checked={gameMode === 'housefull'}
+                    onChange={() => setGameMode('housefull')}
+                    className="accent-lime-400"
+                  />
+                  <span>🏠 Housefull <span className="text-neutral-500">(complete full card)</span></span>
+                </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gameMode"
+                    value="cross"
+                    checked={gameMode === 'cross'}
+                    onChange={() => setGameMode('cross')}
+                    className="accent-lime-400"
+                  />
+                  <span>✚ Cross <span className="text-neutral-500">(any row or column)</span></span>
+                </label>
+              </div>
             </form>
           ) : (
             <div>
-              <p className="text-sm text-neutral-400">{game.name} · {game.status} · {game.playerCount} players · {game.maxNumber} numbers · {game.cardSize}/card</p>
+              <p className="text-sm text-neutral-400">
+                {game.name} · {game.status} · {game.playerCount} players · {game.maxNumber} numbers · {game.cardSize}/card
+                {' · '}
+                <span className={`font-semibold ${(game as { gameMode?: string }).gameMode === 'cross' ? 'text-amber-400' : 'text-lime-400'}`}>
+                  {(game as { gameMode?: string }).gameMode === 'cross' ? '✚ Cross mode' : '🏠 Housefull mode'}
+                </span>
+              </p>
               {game.status === 'setup' && (
                 <form
                   className="mt-2 flex gap-2"
