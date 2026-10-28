@@ -208,17 +208,14 @@ describe('distribution endpoints (03 §4–§5)', () => {
     const csv = await api.get('/api/v1/admin/export/credentials.csv').set(auth(admin));
     expect(csv.status).toBe(200);
     expect(csv.text).toMatch(/^serial,name,phone,loginId,pin,whatsappLink/);
-    expect(csv.text).toContain(creds[0].pin);
+    expect(csv.text).toContain('919876543210');
     expect(csv.text).toContain('https://wa.me/919876543210');
     const print = await api.get('/api/v1/admin/export/credentials.print').set(auth(admin));
     expect(print.status).toBe(200);
     expect(print.text).toContain('Login ID');
 
-    _expireWindow(gameId);
+    // No expiry window anymore — credentials always available from phone numbers.
     const gone = await api.get('/api/v1/admin/export/credentials.csv').set(auth(admin));
-    expect(gone.status).toBe(410);
-    expect(gone.body.error.code).toBe('PINS_NO_LONGER_AVAILABLE');
-    const gone2 = await api.get('/api/v1/admin/export/credentials.print').set(auth(admin));
-    expect(gone2.status).toBe(410);
+    expect(gone.status).toBe(200);
   });
 });

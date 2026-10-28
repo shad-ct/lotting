@@ -82,11 +82,11 @@ export async function bootstrapGame(opts?: {
   const imp = await api
     .post('/api/v1/admin/players/import')
     .set(auth(admin))
-    .send(names.map((name) => ({ name })));
+    .send(names.map((name, i) => ({ name, phone: `900000000${i}` })));
   if (imp.status !== 201) throw new Error(`import failed: ${imp.status} ${JSON.stringify(imp.body)}`);
 
-  const creds = await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin)).send();
-  if (creds.status !== 201) throw new Error(`creds failed: ${creds.status} ${JSON.stringify(creds.body)}`);
+  const list = await api.get('/api/v1/admin/players').set(auth(admin));
+    const creds = { body: { items: (list.body as { items: { serial: number; name: string; loginId: string; phone: string | null }[] }).items.map((p) => ({ serial: p.serial, name: p.name, loginId: p.loginId, pin: p.phone ?? '' })) } };
 
   const gen = await api.post('/api/v1/admin/cards/generate').set(auth(admin)).send();
   if (gen.status !== 201) throw new Error(`gen cards failed: ${gen.status} ${JSON.stringify(gen.body)}`);

@@ -67,10 +67,11 @@ describe('game lifecycle (post-game restart / new game)', () => {
   it('confirmed winners appear in /me/card (empty before any win)', async () => {
     const admin = await adminToken();
     expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'W', playerCount: 1, cardSize: 2, maxNumber: 3 })).status).toBe(201);
-    const imp = await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Solo' }]);
+    const imp = await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Solo', phone: '9000000000' }]);
     expect(imp.status).toBe(201);
-    const creds = await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin));
-    const { loginId, pin } = (creds.body as { items: { loginId: string; pin: string }[] }).items[0];
+    const list = await api.get('/api/v1/admin/players').set(auth(admin));
+    const { loginId } = (list.body as { items: { loginId: string; phone: string | null }[] }).items[0];
+    const pin = '919000000000';
     await api.post('/api/v1/admin/cards/generate').set(auth(admin));
     await api.post('/api/v1/admin/cards/lock').set(auth(admin));
     await api.post('/api/v1/admin/game/start').set(auth(admin));

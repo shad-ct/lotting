@@ -45,7 +45,6 @@ export function Setup() {
   const total = players?.total ?? 0;
   const need = game?.playerCount ?? 0;
   const hasCards = (players?.items.filter((p) => p.hasCard).length ?? 0) >= need && need > 0;
-  const hasPins = (players?.items.filter((p) => p.hasPin).length ?? 0) >= need && need > 0;
 
   return (
     <main className="mx-auto max-w-3xl p-4 sm:p-6" onMouseLeave={() => creds.length > 0 && setLeaving(true)}>
@@ -129,58 +128,30 @@ export function Setup() {
           <div className="flex flex-wrap gap-2">
             <Link to="/admin/players" className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">Manage players / CSV import</Link>
           </div>
-          {total >= need && <p className="mt-1 text-xs text-neutral-500">Player limit reached ({total}/{need}).</p>}
+          <p className="mt-1 text-xs text-neutral-500">{total} players added (no limit).</p>
         </Step>
 
-        <Step n={3} title="Generate credentials (one-time PIN reveal)" done={hasPins}>
-          <button type="button" disabled={!game || hasPins || total < need} onClick={() => {
-            setMsg('');
-            apiFetch<{ items: Cred[] }>('/api/v1/admin/players/credentials/generate', { method: 'POST' })
-              .then((r) => { setCreds(r.items); refresh(); })
-              .catch((e: unknown) => setMsg(friendlyMessage(e)));
-          }} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
-            Generate PINs
-          </button>
-          {game?.status === 'setup' && !hasPins && total < need && <p className="mt-1 text-xs text-neutral-500">Finish step 2 first — all {need} players must be added.</p>}
-          {creds.length > 0 && (
-            <div className="mt-2 overflow-x-auto">
-              <p className="text-sm font-bold text-yellow-200">Copy/download now — PINs can't be shown again.</p>
-              <table className="mt-1 w-full text-sm">
-                <thead><tr className="text-left text-neutral-500"><th>#</th><th>Name</th><th>Login</th><th>PIN</th></tr></thead>
-                <tbody>{creds.map((c) => (
-                  <tr key={c.serial} className="tnum border-t border-neutral-800"><td>{c.serial}</td><td>{c.name}</td><td>{c.loginId}</td><td className="font-black">{c.pin}</td></tr>
-                ))}</tbody>
-              </table>
-              <div className="mt-2 flex gap-2">
-                <CopyButton text={creds.map((c) => `${c.serial},${c.name},${c.loginId},${c.pin}`).join('\n')} label="Copy all" />
-                <a href="/api/v1/admin/export/credentials.csv" className="rounded-md border border-neutral-700 px-2 py-1 text-xs" download>Download CSV</a>
-                <a href="/api/v1/admin/export/credentials.print" target="_blank" rel="noreferrer" className="rounded-md border border-neutral-700 px-2 py-1 text-xs">Print slips</a>
-              </div>
-            </div>
-          )}
-        </Step>
-
-        <Step n={4} title="Generate cards" done={hasCards}>
+        <Step n={3} title="Generate cards" done={hasCards}>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!game || game.status !== 'setup' || !hasPins} onClick={() => doPost('/api/v1/admin/cards/generate')} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
+            <button type="button" disabled={!game || game.status !== 'setup' || total === 0} onClick={() => doPost('/api/v1/admin/cards/generate')} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
               Generate cards
             </button>
             {game?.status === 'setup' && hasCards && <span className="text-xs text-neutral-500">Regenerate allowed until locked.</span>}
           </div>
-          {game?.status === 'setup' && !hasPins && <p className="mt-1 text-xs text-neutral-500">Finish step 3 first — every player needs a PIN.</p>}
+          {game?.status === 'setup' && total === 0 && <p className="mt-1 text-xs text-neutral-500">Add players first.</p>}
           {typeof game?.generationStats === 'object' && game?.generationStats != null && (
             <pre className="tnum mt-2 overflow-auto rounded-lg bg-neutral-900 p-2 text-xs">{JSON.stringify(game.generationStats, null, 1)}</pre>
           )}
         </Step>
 
-        <Step n={5} title="Lock cards (irreversible)" done={['ready', 'live', 'finished'].includes(game?.status ?? '')}>
-          <button type="button" disabled={!game || game.status !== 'setup' || !hasPins || !hasCards} onClick={() => doPost('/api/v1/admin/cards/lock')} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300 disabled:opacity-40">
+        <Step n={4} title="Lock cards (irreversible)" done={['ready', 'live', 'finished'].includes(game?.status ?? '')}>
+          <button type="button" disabled={!game || game.status !== 'setup' || !hasCards} onClick={() => doPost('/api/v1/admin/cards/lock')} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300 disabled:opacity-40">
             Lock cards — after this, cards can't be changed
           </button>
-          {game?.status === 'setup' && (!hasPins || !hasCards) && <p className="mt-1 text-xs text-neutral-500">Finish steps 3–4 first — PINs and cards for every player.</p>}
+          {game?.status === 'setup' && !hasCards && <p className="mt-1 text-xs text-neutral-500">Generate cards first.</p>}
         </Step>
 
-        <Step n={6} title="Distribute, then start" done={game?.status === 'live' || game?.status === 'finished'}>
+        <Step n={5} title="Distribute, then start" done={game?.status === 'live' || game?.status === 'finished'}>
           <div className="flex flex-wrap gap-2">
             <Link to="/admin/distribution" className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">Go to Distribution</Link>
             <button type="button" disabled={game?.status !== 'ready'} onClick={() => doPost('/api/v1/admin/game/start')} className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40">
@@ -191,7 +162,7 @@ export function Setup() {
         </Step>
 
         {game && (
-          <Step n={7} title="After the event (finish / reset / new game)" done={false}>
+          <Step n={6} title="After the event (finish / reset / new game)" done={false}>
             <div className="flex flex-wrap gap-2">
               {game.status === 'live' && (
                 <button type="button" onClick={() => setConfirmAction('finish')} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">

@@ -35,7 +35,7 @@ export const updateGameSchema = z
 
 export const playerInputSchema = z
   .object({
-    name: z.string().min(1).max(120),
+    name: z.string().min(1).max(120).optional(),
     phone: z.string().max(30).optional().nullable(),
   })
   .strict();

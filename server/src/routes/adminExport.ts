@@ -87,24 +87,18 @@ router.get('/export/cards.zip', async (req, res, next) => {
   }
 });
 
-function credentialsOr410(gameId: string) {
-  const pins = getPins(gameId);
-  if (!pins) {
-    throw err(
-      'PINS_NO_LONGER_AVAILABLE',
-      'The 15-minute PIN window has expired — use Reset PIN per player',
-      410,
-    );
-  }
-  return pins;
+function credentialsMap(players: { _id: unknown; phone: string | null }[]) {
+  const m = new Map<string, string>();
+  for (const p of players) if (p.phone) m.set(String(p._id), p.phone);
+  return m;
 }
 
 /** GET /admin/export/credentials.csv — one-time window (410 after 15 min). */
 router.get('/export/credentials.csv', async (req, res, next) => {
   try {
     const game = req.game!;
-    const pins = credentialsOr410(String(game._id));
     const players = await Player.find({ gameId: game._id }).sort({ serial: 1 }).lean();
+    const pins = credentialsMap(players);
     const lines = ['serial,name,phone,loginId,pin,whatsappLink'];
     for (const p of players) {
       const pin = pins.get(String(p._id)) ?? '';
@@ -134,8 +128,8 @@ router.get('/export/credentials.csv', async (req, res, next) => {
 router.get('/export/credentials.print', async (req, res, next) => {
   try {
     const game = req.game!;
-    const pins = credentialsOr410(String(game._id));
     const players = await Player.find({ gameId: game._id }).sort({ serial: 1 }).lean();
+    const pins = credentialsMap(players);
     const esc = (s: string) =>
       String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const slips = players

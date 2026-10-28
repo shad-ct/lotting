@@ -38,21 +38,9 @@ export function parsePlayerCsv(text: string): { name: string; phone?: string }[]
 
 export async function addPlayers(
   game: GameDoc,
-  inputs: { name: string; phone?: string | null }[],
+  inputs: { name?: string; phone?: string | null }[],
 ): Promise<{ created: number; players: { serial: number; loginId: string; name: string }[] }> {
   const gameId = game._id as Types.ObjectId;
-  // Enforce the game's configured player limit (no product cap anymore —
-  // the card generator handles arbitrary player counts with unique cards).
-  const cap = game.playerCount;
-  const current = await Player.countDocuments({ gameId });
-  if (current + inputs.length > cap) {
-    throw err(
-      'PLAYER_LIMIT_REACHED',
-      `Player limit reached (${current}/${cap}) — delete a player to add another`,
-      409,
-      { limit: cap, current, requested: inputs.length },
-    );
-  }
   const last = await Player.findOne({ gameId }).sort({ serial: -1 }).select('serial').lean();
   let serial = (last?.serial ?? 0) + 1;
   const out: { serial: number; loginId: string; name: string }[] = [];
@@ -63,11 +51,13 @@ export async function addPlayers(
       try {
         phone = normalizePhone(input.phone, game.defaultCountryCode ?? env.DEFAULT_COUNTRY_CODE);
       } catch {
-        throw err('INVALID_PHONE', `Invalid phone for ${input.name}`, 422, { name: input.name });
+        throw err('INVALID_PHONE', `Invalid phone for ${input.name ?? loginId}`, 422, { name: input.name });
       }
     }
+    const name = (input.name && input.name.trim()) || `Player ${serial}`;
     try {
-      const p = await Player.create({ gameId, serial, name: input.name, phone, loginId });
+      const pinHash = phone ? await hashSecret(phone) : null;
+      const p = await Player.create({ gameId, serial, name, phone, loginId, pinHash });
       out.push({ serial: p.serial, loginId: p.loginId, name: p.name });
       serial++;
     } catch (e) {
@@ -77,68 +67,21 @@ export async function addPlayers(
       throw e;
     }
   }
+  // Keep configured count in sync with actual roster (no hard cap).
+  game.playerCount = await Player.countDocuments({ gameId });
+  await game.save();
   return { created: out.length, players: out };
-}
-
-/** Generate PINs for all players that have none. Returns ONE-TIME plain PINs. */
-export async function generateCredentials(game: GameDoc): Promise<{ serial: number; name: string; loginId: string; pin: string }[]> {
-  const gameId = game._id as Types.ObjectId;
-  // Step order: PINs only after the full roster is in.
-  const total = await Player.countDocuments({ gameId });
-  if (total !== game.playerCount) {
-    throw err('PLAYERS_INCOMPLETE', `Add all ${game.playerCount} players first (have ${total})`, 409, {
-      need: game.playerCount,
-      have: total,
-    });
-  }
-  const players = await Player.find({ gameId, pinHash: null }).sort({ serial: 1 });
-  const pins = new Map<string, string>();
-  const out: { serial: number; name: string; loginId: string; pin: string }[] = [];
-  for (const p of players) {
-    const pin = generatePin();
-    p.pinHash = await hashSecret(pin);
-    await p.save();
-    pins.set(String(p._id), pin);
-    out.push({ serial: p.serial, name: p.name, loginId: p.loginId, pin });
-  }
-  if (out.length > 0) {
-    const merged = new Map(getPins(String(gameId)) ?? []);
-    for (const [k, v] of pins) merged.set(k, v);
-    storePins(String(gameId), merged);
-    await AuditLog.create({ gameId, actor: 'admin', action: 'reset_pin', payload: { scope: 'bulk', count: out.length } });
-  }
-  return out;
-}
-
-/** Reset one player's PIN. The old PIN dies immediately. */
-export async function resetPin(game: GameDoc, playerId: string): Promise<{ serial: number; loginId: string; pin: string }> {
-  const gameId = game._id as Types.ObjectId;
-  const player = await Player.findOne({ _id: playerId, gameId });
-  if (!player) throw err('PLAYER_NOT_FOUND', 'Player not found', 404);
-  const pin = generatePin();
-  player.pinHash = await hashSecret(pin);
-  player.pinResetAt = new Date();
-  await player.save();
-  addPin(String(gameId), String(player._id), pin);
-  await AuditLog.create({ gameId, actor: 'admin', action: 'reset_pin', payload: { playerId: String(player._id), serial: player.serial } });
-  return { serial: player.serial, loginId: player.loginId, pin };
 }
 
 export async function generateCardsForGame(game: GameDoc, hmacSecret: string): Promise<object> {
   const gameId = game._id as Types.ObjectId;
   await assertRegenerable(gameId);
   const players = await Player.find({ gameId }).sort({ serial: 1 }).select('serial');
-  if (players.length !== game.playerCount) {
-    throw err('PLAYER_COUNT_MISMATCH', `Need ${game.playerCount} players, have ${players.length}`, 409, {
-      need: game.playerCount,
-      have: players.length,
-    });
+  if (players.length === 0) {
+    throw err('PLAYER_COUNT_MISMATCH', 'Add players first', 409, { need: 1, have: 0 });
   }
-  // Step order: cards only after every player has a PIN.
-  const pinless = await Player.countDocuments({ gameId, pinHash: null });
-  if (pinless > 0) {
-    throw err('PINS_INCOMPLETE', `Generate PINs for all players first (${pinless} still missing)`, 409, { pinless });
-  }
+  game.playerCount = players.length;
+  await game.save();
   await clearCards(gameId);
   const seed = newSeed();
   const deal = generateCards(
@@ -162,20 +105,17 @@ export async function generateCardsForGame(game: GameDoc, hmacSecret: string): P
 export async function lockCards(game: GameDoc): Promise<void> {
   if (game.status !== 'setup') throw err('CARDS_LOCKED', 'Cards can only be locked from setup', 409, { status: game.status });
   const gameId = game._id as Types.ObjectId;
-  const [playerCount, cardCount, pinnless] = await Promise.all([
+  const [playerCount, cardCount] = await Promise.all([
     Player.countDocuments({ gameId }),
     Card.countDocuments({ gameId }),
-    Player.countDocuments({ gameId, pinHash: null }),
   ]);
-  if (playerCount !== game.playerCount) {
-    throw err('SETUP_INCOMPLETE', `Need ${game.playerCount} players, have ${playerCount}`, 409);
+  if (playerCount === 0) {
+    throw err('SETUP_INCOMPLETE', 'Add players first', 409);
   }
-  if (cardCount !== game.playerCount) {
+  if (cardCount !== playerCount) {
     throw err('SETUP_INCOMPLETE', 'Every player needs a card before locking', 409);
   }
-  if (pinnless > 0) {
-    throw err('SETUP_INCOMPLETE', `${pinnless} players still need PINs`, 409);
-  }
+  game.playerCount = playerCount;
   game.status = 'ready';
   game.cardsLockedAt = new Date();
   await game.save();

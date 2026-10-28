@@ -1,0 +1,20 @@
+[build]
+  command = "npm run build --workspace=@lotto/shared && npm run build --workspace=@lotto/web"
+  publish = "web/dist"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://lotto-server-q185.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/socket.io/*"
+  to = "https://lotto-server-q185.onrender.com/socket.io/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -6,13 +6,14 @@ import {
   updatePlayerSchema,
 } from '@lotto/shared/schemas.js';
 import { normalizePhone } from '@lotto/shared/credentials.js';
+import { hashSecret } from '../utils/password.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { requireGame } from '../middleware/requireGame.js';
 import { validateBody } from '../middleware/validate.js';
 import { Card } from '../models/Card.js';
 import { Draw } from '../models/Draw.js';
 import { Player } from '../models/Player.js';
-import { addPlayers, generateCredentials, parsePlayerCsv, resetPin } from '../services/gameService.js';
+import { addPlayers, parsePlayerCsv } from '../services/gameService.js';
 import { getProgress } from '../services/progressService.js';
 import { err } from '../utils/errors.js';
 
@@ -47,7 +48,7 @@ router.get('/players', requireGame, async (req, res, next) => {
 router.post('/players/import', requireGame, async (req, res, next) => {
   try {
     if (req.game!.status !== 'setup') throw err('GAME_LOCKED', 'Players can only be imported while in setup', 409);
-    let inputs: { name: string; phone?: string | null }[];
+    let inputs: { name?: string; phone?: string | null }[];
     if (typeof (req.body as { csv?: unknown })?.csv === 'string') {
       inputs = parsePlayerCsv((req.body as { csv: string }).csv);
     } else {
@@ -59,7 +60,7 @@ router.post('/players/import', requireGame, async (req, res, next) => {
       }
       inputs = parsed.data;
     }
-    const result = await addPlayers(req.game!, inputs);
+    const result = await addPlayers(req.game!, inputs as { name?: string; phone?: string | null }[]);
     res.status(201).json(result);
   } catch (e) {
     next(e);
@@ -69,7 +70,7 @@ router.post('/players/import', requireGame, async (req, res, next) => {
 router.post('/players', requireGame, validateBody(createPlayerSchema), async (req, res, next) => {
   try {
     if (req.game!.status !== 'setup') throw err('GAME_LOCKED', 'Players can only be added while in setup', 409);
-    const result = await addPlayers(req.game!, [req.body as { name: string; phone?: string }]);
+    const result = await addPlayers(req.game!, [req.body as { name?: string; phone?: string }]);
     res.status(201).json(result.players[0]);
   } catch (e) {
     next(e);
@@ -83,7 +84,9 @@ router.patch('/players/:id', requireGame, validateBody(updatePlayerSchema), asyn
     const body = req.body as { name?: string; phone?: string | null; loginId?: string; isActive?: boolean };
     if (body.name != null) player.name = body.name;
     if (body.phone !== undefined) {
-      player.phone = body.phone ? normalizePhone(body.phone, req.game!.defaultCountryCode) : null;
+      const normalized = body.phone ? normalizePhone(body.phone, req.game!.defaultCountryCode) : null;
+      player.phone = normalized;
+      player.pinHash = normalized ? await hashSecret(normalized) : null;
     }
     if (body.loginId != null) player.loginId = body.loginId;
     if (body.isActive !== undefined) player.isActive = body.isActive;
@@ -105,25 +108,6 @@ router.delete('/players/:id', requireGame, async (req, res, next) => {
     const player = await Player.findOneAndDelete({ _id: req.params.id, gameId: req.game!._id });
     if (!player) throw err('PLAYER_NOT_FOUND', 'Player not found', 404);
     res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
-});
-
-/** One-time PIN reveal for all PIN-less players. */
-router.post('/players/credentials/generate', requireGame, async (_req, res, next) => {
-  try {
-    const creds = await generateCredentials(_req.game!);
-    res.status(201).json({ items: creds, total: creds.length });
-  } catch (e) {
-    next(e);
-  }
-});
-
-router.post('/players/:id/reset-pin', requireGame, async (req, res, next) => {
-  try {
-    const cred = await resetPin(req.game!, req.params.id);
-    res.status(201).json(cred);
   } catch (e) {
     next(e);
   }

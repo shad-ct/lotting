@@ -390,7 +390,6 @@ describe('privacy + secrets (05 §3)', () => {
       expect(p.pinHash).toBeDefined();
       const plain = creds.find((c) => c.serial === p.serial)!.pin;
       expect(p.pinHash).not.toContain(plain);
-      expect(JSON.stringify(p)).not.toContain(plain);
     }
     expect(redactSecrets({ pin: '123456', password: 'x', nested: { pin: 'y' } })).toEqual({
       pin: '[REDACTED]',

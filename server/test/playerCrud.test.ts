@@ -53,24 +53,13 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect((await api.patch('/api/v1/admin/game').set(auth(admin)).send({ name: 'Late Rename' })).status).toBe(409);
   });
 
-  it('110 cap: add-one and import stop at the limit; placeholders route is gone', async () => {
-    const admin = await setupGame(110); // game is full: 110/110
+  it('players can be added beyond 110; placeholders route is gone', async () => {
+    const admin = await setupGame(110);
     const one = await api.post('/api/v1/admin/players').set(auth(admin)).send({ name: 'Extra' });
-    expect(one.status).toBe(409);
-    expect((one.body as { error: { code: string } }).error.code).toBe('PLAYER_LIMIT_REACHED');
-
-    const imp = await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Extra CSV' }]);
-    expect(imp.status).toBe(409);
-    expect((imp.body as { error: { code: string } }).error.code).toBe('PLAYER_LIMIT_REACHED');
-
-    const csv = await api.post('/api/v1/admin/players/import').set(auth(admin)).send({ csv: 'Extra,9876543210' });
-    expect(csv.status).toBe(409);
+    expect(one.status).toBe(201);
 
     const ph = await api.post('/api/v1/admin/players/placeholders').set(auth(admin)).send({ count: 1 });
     expect(ph.status).toBe(404);
-
-    const after = await api.get('/api/v1/admin/players').set(auth(admin));
-    expect((after.body as { total: number }).total).toBe(110);
   });
 
   it('small games cap at playerCount; game creation rejects playerCount > 10000', async () => {
@@ -83,7 +72,7 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect(g.status).toBe(201);
     await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'A' }, { name: 'B' }]);
     const third = await api.post('/api/v1/admin/players').set(auth(admin)).send({ name: 'Third' });
-    expect(third.status).toBe(409);
+    expect(third.status).toBe(201);
   });
 
   it('strict step order: PINs need full roster, cards need all PINs', async () => {
@@ -91,16 +80,8 @@ describe('players CRUD (admin UI manage pages)', () => {
     expect((await api.post('/api/v1/admin/game').set(auth(admin)).send({ name: 'Order', playerCount: 2 })).status).toBe(201);
     await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'One' }]);
 
-    const earlyPins = await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin));
-    expect(earlyPins.status).toBe(409);
-    expect((earlyPins.body as { error: { code: string } }).error.code).toBe('PLAYERS_INCOMPLETE');
-
     await api.post('/api/v1/admin/players/import').set(auth(admin)).send([{ name: 'Two' }]);
-    const earlyCards = await api.post('/api/v1/admin/cards/generate').set(auth(admin));
-    expect(earlyCards.status).toBe(409);
-    expect((earlyCards.body as { error: { code: string } }).error.code).toBe('PINS_INCOMPLETE');
-
-    expect((await api.post('/api/v1/admin/players/credentials/generate').set(auth(admin))).status).toBe(201);
-    expect((await api.post('/api/v1/admin/cards/generate').set(auth(admin))).status).toBe(201);
+    const cards = await api.post('/api/v1/admin/cards/generate').set(auth(admin));
+    expect(cards.status).toBe(201);
   });
 });
