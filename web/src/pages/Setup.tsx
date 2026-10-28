@@ -6,8 +6,6 @@ import { useAdminGame, useAdminPlayers } from '../api/hooks.js';
 import { ConfirmDialog, CopyButton, EmptyState } from '../components/grids.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
-interface Cred { serial: number; name: string; loginId: string; pin: string }
-
 function Step({ n, title, done, children }: { n: number; title: string; done: boolean; children: React.ReactNode }) {
   return (
     <section className={`rounded-xl border p-4 ${done ? 'border-lime-800 bg-neutral-900' : 'border-neutral-800 bg-neutral-950'}`}>
@@ -23,12 +21,10 @@ export function Setup() {
   const { data: game } = useAdminGame();
   const { data: players } = useAdminPlayers();
   const [gameName, setGameName] = useState('Onam Lotto 2026');
+  const [phone, setPhone] = useState('');
   const [gameMode, setGameMode] = useState<'housefull' | 'cross'>('housefull');
   const [msg, setMsg] = useState('');
-  const [creds, setCreds] = useState<Cred[]>([]);
-  const [leaving, setLeaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'reopen'>(null);
-  const [nextName, setNextName] = useState('Onam Lotto 2026');
   const [resetText, setResetText] = useState('');
   const [wipeText, setWipeText] = useState('');
 
@@ -47,15 +43,9 @@ export function Setup() {
   const hasCards = (players?.items.filter((p) => p.hasCard).length ?? 0) >= need && need > 0;
 
   return (
-    <main className="mx-auto max-w-3xl p-4 sm:p-6" onMouseLeave={() => creds.length > 0 && setLeaving(true)}>
+    <main className="mx-auto max-w-3xl p-4 sm:p-6">
       <h1 className="text-2xl font-black">Game setup</h1>
       {msg && <p className="mt-2 rounded-lg border border-red-800 p-2 text-sm text-red-300" role="alert">{msg}</p>}
-      {leaving && creds.length > 0 && (
-        <p className="mt-2 rounded-lg border border-yellow-800 bg-yellow-950 p-3 text-sm text-yellow-200" role="alert">
-          PINs can't be shown again. Download/copy them now before leaving this screen.
-        </p>
-      )}
-
       <div className="mt-4 flex flex-col gap-3">
         <Step n={1} title="Create game" done={!!game}>
           {!game ? (
@@ -124,11 +114,33 @@ export function Setup() {
           )}
         </Step>
 
-        <Step n={2} title={`Add players (${total}/${need})`} done={total >= need}>
-          <div className="flex flex-wrap gap-2">
+        <Step n={2} title="Add players" done={total > 0}>
+          <form
+            className="flex flex-wrap gap-2 items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setMsg('');
+              apiFetch('/api/v1/admin/players', { method: 'POST', body: JSON.stringify({ phone }) })
+                .then(refresh)
+                .catch((e: unknown) => setMsg(friendlyMessage(e)));
+              setPhone('');
+            }}
+          >
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              aria-label="Player phone"
+              className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-sm"
+            />
+            <button type="submit" disabled={!game || game.status !== 'setup'} className="rounded-lg bg-lime-400 px-4 font-bold text-neutral-950 disabled:opacity-40">
+              Add player
+            </button>
+          </form>
+          <div className="mt-2 flex flex-wrap gap-2">
             <Link to="/admin/players" className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">Manage players / CSV import</Link>
           </div>
-          <p className="mt-1 text-xs text-neutral-500">{total} players added (no limit).</p>
+          <p className="mt-1 text-xs text-neutral-500">{total} players added (no limit — game uses whoever is on the roster).</p>
         </Step>
 
         <Step n={3} title="Generate cards" done={hasCards}>
@@ -162,7 +174,7 @@ export function Setup() {
         </Step>
 
         {game && (
-          <Step n={6} title="After the event (finish / reset / new game)" done={false}>
+          <Step n={6} title="After the event (finish / reset)" done={false}>
             <div className="flex flex-wrap gap-2">
               {game.status === 'live' && (
                 <button type="button" onClick={() => setConfirmAction('finish')} className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm">
@@ -224,29 +236,6 @@ export function Setup() {
               </button>
             </form>
             <p className="mt-1 text-xs text-neutral-500">Wipe cannot be undone. Works in any status — the game returns to empty setup.</p>
-            <form
-              className="mt-3 flex flex-wrap items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setMsg('');
-                apiFetch('/api/v1/admin/game', { method: 'POST', body: JSON.stringify({ name: nextName }) })
-                  .then(refresh)
-                  .catch((er: unknown) => setMsg(friendlyMessage(er)));
-              }}
-            >
-              <input value={nextName} onChange={(e) => setNextName(e.target.value)} className="w-64 rounded-lg border border-neutral-700 bg-neutral-900 p-2 text-sm" aria-label="New game name" placeholder="New game name" />
-              <button
-                type="submit"
-                disabled={game.status !== 'finished'}
-                title={game.status !== 'finished' ? 'Finish the current game first' : 'Start a fresh game (old data stays archived under its own game)'}
-                className="rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-bold text-neutral-950 disabled:opacity-40"
-              >
-                Start new game
-              </button>
-            </form>
-            {game.status !== 'finished' && (
-              <p className="mt-1 text-xs text-neutral-500">A new game can be created once this one is finished. Past games stay in the database under their own game records.</p>
-            )}
           </Step>
         )}
 

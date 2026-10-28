@@ -16,7 +16,7 @@ export function useLiveSync(opts?: { onWinDetected?: () => void }) {
   onWin.current = opts?.onWinDetected;
 
   useEffect(() => {
-    const socket: Socket = io({ withCredentials: true, reconnection: true });
+    const socket: Socket = io({ withCredentials: true, reconnection: true, transports: ['polling'] });
 
     const refetchAll = () => {
       void qc.invalidateQueries({ queryKey: qk.board });

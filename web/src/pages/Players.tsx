@@ -11,15 +11,12 @@ export function Players() {
   useLiveSync();
   const { data } = useAdminPlayers();
   const { data: game } = useAdminGame();
-  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [csv, setCsv] = useState('');
   const [msg, setMsg] = useState('');
   const [importReport, setImportReport] = useState('');
   const [deleting, setDeleting] = useState<{ id: string; name: string } | null>(null);
   const total = data?.total ?? 0;
-  const cap = game?.playerCount ?? 110;
-  const atCap = total >= cap;
 
   const refresh = () => void qc.invalidateQueries();  const post = (path: string, body?: object) => {
     setMsg('');
@@ -45,30 +42,24 @@ export function Players() {
 
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
-      <h1 className="text-2xl font-black">Players ({data?.total ?? 0}{cap != null ? `/${cap}` : ''})</h1>
+      <h1 className="text-2xl font-black">Players ({data?.total ?? 0})</h1>
       {msg && <p className="mt-2 text-sm text-red-400" role="alert">{msg}</p>}
-      {atCap && (
-        <p className="mt-2 rounded-lg border border-yellow-800 bg-yellow-950 p-3 text-sm text-yellow-200" role="alert">
-          Player limit reached ({data?.total}/{cap}) — no more can be added. Delete a player to free a slot.
-        </p>
-      )}
-
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <form
           className="rounded-xl border border-neutral-800 bg-neutral-900 p-3"
           onSubmit={(e) => {
             e.preventDefault();
-            post('/api/v1/admin/players', { name, phone: phone || undefined });
-            setName('');
+            setMsg('');
+            post('/api/v1/admin/players', { phone: phone || undefined });
             setPhone('');
           }}
         >
-          <h2 className="text-sm font-bold">Add one {atCap && <span className="font-normal text-yellow-200">(limit reached)</span>}</h2>
+          <h2 className="text-sm font-bold">Add player</h2>
           <div className="mt-2 flex gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" disabled={atCap} className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm disabled:opacity-40" />
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" aria-label="Phone" disabled={atCap} className="w-36 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm disabled:opacity-40" />
-            <button type="submit" disabled={atCap} className="rounded-lg bg-lime-400 px-3 text-sm font-bold text-neutral-950 disabled:opacity-40">Add</button>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number (becomes password)" aria-label="Phone" className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-2 text-sm" />
+            <button type="submit" className="rounded-lg bg-lime-400 px-3 text-sm font-bold text-neutral-950">Add player</button>
           </div>
+          <p className="mt-1 text-xs text-neutral-500">Login ID and card are auto-assigned. Phone number is the login password.</p>
         </form>
 
         <form
@@ -84,9 +75,9 @@ export function Players() {
             }
           }}
         >
-          <h2 className="text-sm font-bold">CSV import <span className="font-normal text-neutral-500">(paste name,phone rows or a JSON array)</span>{atCap && <span className="font-normal text-yellow-200"> — limit reached</span>}</h2>
-          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder={'Anu,9876543210\nRahul,'} aria-label="CSV input" disabled={atCap} className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs disabled:opacity-40" />
-          <button type="submit" disabled={atCap} className="mt-2 rounded-lg border border-neutral-600 px-3 py-1 text-sm disabled:opacity-40">Preview & import</button>
+          <h2 className="text-sm font-bold">CSV import <span className="font-normal text-neutral-500">(paste name,phone rows or a JSON array)</span></h2>
+          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder={'9876543210\n8765432101'} aria-label="CSV input" className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs" />
+          <button type="submit" className="mt-2 rounded-lg border border-neutral-600 px-3 py-1 text-sm">Preview & import</button>
           {importReport && <pre className="tnum mt-1 max-h-24 overflow-auto text-xs text-neutral-400">{importReport}</pre>}
         </form>
       </div>
@@ -95,7 +86,7 @@ export function Players() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-neutral-500">
-              <th className="p-2">#</th><th className="p-2">Name</th><th className="p-2">Login</th><th className="p-2">Phone</th><th className="p-2">PIN</th><th className="p-2">Card</th><th className="p-2"></th>
+              <th className="p-2">#</th><th className="p-2">Name</th><th className="p-2">Login</th><th className="p-2">Phone</th><th className="p-2">Card</th><th className="p-2"></th>
             </tr>
           </thead>
           <tbody>
@@ -105,7 +96,6 @@ export function Players() {
                 <td className="p-2 font-semibold">{p.name}</td>
                 <td className="tnum p-2">{p.loginId}</td>
                 <td className="tnum p-2">{p.phone ?? '—'}</td>
-                <td className="p-2">{p.hasPin ? '✓' : '—'}</td>
                 <td className="p-2">{p.hasCard ? '✓' : '—'}</td>
                 <td className="p-2 whitespace-nowrap">
                   <Link to={`/admin/players/${p.id}`} className="text-lime-300 underline">detail</Link>
@@ -160,7 +150,6 @@ export function PlayerDetail() {
   const { data: game } = useAdminGame();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [msg, setMsg] = useState('');
-  const [pin, setPin] = useState('');
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -259,20 +248,7 @@ export function PlayerDetail() {
           <p className="tnum text-sm">Login {detail.loginId} · Phone {detail.phone ?? '—'} · Rank {detail.rank ?? '–'}</p>
           <p className="tnum text-sm">{detail.markedCount}/16 marked · {detail.remainingCount} left</p>
           <p className="text-xs text-neutral-500">Timeline: {detail.markHistory.filter((h) => h.seq != null).map((h) => `${h.number}@${h.seq}`).join(', ') || 'no marks yet'}</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              className="rounded-lg border border-neutral-600 px-3 py-1 text-sm"
-              onClick={() => {
-                apiFetch<{ pin: string }>(`/api/v1/admin/players/${detail.id}/reset-pin`, { method: 'POST' })
-                  .then((r) => setPin(r.pin))
-                  .catch((e: unknown) => setMsg(friendlyMessage(e)));
-              }}
-            >
-              Reset PIN
-            </button>
-            {pin && <span className="tnum rounded bg-yellow-950 px-2 py-1 text-sm font-black text-yellow-200">New PIN: {pin} (copy now)</span>}
-          </div>
+  
         </div>
         <div>
           {detail.card ? (
