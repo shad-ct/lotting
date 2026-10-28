@@ -25,7 +25,7 @@ export const DEFAULT_WIN_RULES: WinRules = {
   anyRow: { enabled: false },
   anyColumn: { enabled: false },
   fourCorners: { enabled: false },
-  diagonals: { enabled: false },
+  diagonals: { enabled: true },
   firstToMarks: { enabled: false, marks: 8 },
   stopAtFirstFullCard: false, // game now continues until maxPrizePlaces confirmed winners
 };
@@ -36,7 +36,7 @@ export const CROSS_WIN_RULES: WinRules = {
   anyRow: { enabled: true },
   anyColumn: { enabled: true },
   fourCorners: { enabled: false },
-  diagonals: { enabled: false },
+  diagonals: { enabled: true },
   firstToMarks: { enabled: false, marks: 8 },
   stopAtFirstFullCard: false,
 };

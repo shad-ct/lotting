@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch, friendlyMessage } from '../api/client.js';
-import { useAdminGame, useAdminPlayers } from '../api/hooks.js';
+import { useAdminGame, useAdminPlayers, useAdminStatus } from '../api/hooks.js';
 import { ConfirmDialog, CopyButton, EmptyState } from '../components/grids.js';
+import { WinnerBanner } from '../components/panels.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
 function Step({ n, title, done, children }: { n: number; title: string; done: boolean; children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export function Setup() {
   useLiveSync();
   const { data: game } = useAdminGame();
   const { data: players } = useAdminPlayers();
+  const { data: status } = useAdminStatus({ full: true });
   const [gameName, setGameName] = useState('Onam Lotto 2026');
   const [phone, setPhone] = useState('');
   const [gameMode, setGameMode] = useState<'housefull' | 'cross'>('housefull');
@@ -45,6 +47,13 @@ export function Setup() {
   return (
     <main className="mx-auto max-w-3xl p-4 sm:p-6">
       <h1 className="text-2xl font-black">Game setup</h1>
+      {status?.winners.detected && status.winners.detected.length > 0 && (
+        <WinnerBanner
+          winners={status.winners.detected.flatMap((e) =>
+            e.players.map((p) => ({ serial: p.serial ?? 0, name: p.name }))
+          )}
+        />
+      )}
       {msg && <p className="mt-2 rounded-lg border border-red-800 p-2 text-sm text-red-300" role="alert">{msg}</p>}
       <div className="mt-4 flex flex-col gap-3">
         <Step n={1} title="Create game" done={!!game}>

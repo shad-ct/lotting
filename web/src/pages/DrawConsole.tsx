@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAdminStatus, useDrawLog, adminApi } from '../api/hooks.js';
 import { ApiError, apiFetch, friendlyMessage } from '../api/client.js';
 import { ConfirmDialog, NumberGrid } from '../components/grids.js';
+import { WinnerBanner } from '../components/panels.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
 export function MiniDrawBox() {
@@ -98,6 +99,13 @@ export function DrawConsole() {
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
       <h1 className="text-2xl font-black">Draw console</h1>
+      {status?.winners.detected && status.winners.detected.length > 0 && (
+        <WinnerBanner
+          winners={status.winners.detected.flatMap((e) =>
+            e.players.map((p) => ({ serial: p.serial ?? 0, name: p.name }))
+          )}
+        />
+      )}
       {!live && (
         <p className="mt-2 rounded-lg border border-yellow-800 bg-yellow-950 p-3 text-sm text-yellow-200">
           Start the game from Setup first — draws are disabled while status is “{game?.status ?? '…'}”.

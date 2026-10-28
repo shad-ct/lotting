@@ -62,6 +62,20 @@ export function AdminDashboard() {
         />
       )}
 
+      {data.winners.confirmed && data.winners.confirmed.length > 0 && (
+        <div className="mt-4 rounded-2xl border-2 border-lime-400 bg-lime-400/10 p-4" role="status">
+          <h3 className="font-bold text-lime-300 text-sm uppercase tracking-widest mb-2">Confirmed winners</h3>
+          <div className="flex flex-wrap gap-3">
+            {data.winners.confirmed.map((e) => (
+              <div key={e.id} className="rounded-lg border border-lime-400/50 bg-lime-400/20 p-3">
+                <p className="font-bold text-lime-200">{e.placing === 1 ? '🥇' : e.placing === 2 ? '🥈' : e.placing === 3 ? '🥉' : `#${e.placing}`} {e.players.map((p)=>p.name).join(' & ')}</p>
+                <p className="tnum text-xs text-neutral-400">Rule: {e.rule} · Draw #{e.drawSeq}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
           <h2 className="font-bold">Leaderboard (top 10)</h2>

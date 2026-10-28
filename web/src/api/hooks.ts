@@ -37,6 +37,7 @@ export function useAdminStatus(params?: { q?: string; sort?: string; full?: bool
   return useQuery({
     queryKey: [...qk.status, qs],
     queryFn: () => apiFetch<StatusData>(`/api/v1/admin/status${qs ? `?${qs}` : ''}`),
+    refetchInterval: 3000,
   });
 }
 
