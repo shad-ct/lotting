@@ -4,6 +4,7 @@ import { defaultLoginId, generatePin, normalizePhone } from '@lotto/shared/crede
 import { AuditLog } from '../models/AuditLog.js';
 import { Card } from '../models/Card.js';
 import { Draw } from '../models/Draw.js';
+import { Game } from '../models/Game.js';
 import type { GameDoc } from '../models/Game.js';
 import { Player } from '../models/Player.js';
 import { WinEvent } from '../models/WinEvent.js';
