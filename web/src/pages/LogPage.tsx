@@ -1,9 +1,11 @@
-import { useAdminGame, useAuditLog, useDrawLog } from '../api/hooks.js';
+import { useAdminGame, useAuditLog, useDrawLog, useAdminStatus } from '../api/hooks.js';
+import { WinnerBanner } from '../components/panels.js';
 
 export function LogPage() {
   const { data: log } = useDrawLog();
   const { data: audit } = useAuditLog();
   const { data: game } = useAdminGame();
+  const { data: status } = useAdminStatus({ full: true });
 
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
@@ -13,6 +15,13 @@ export function LogPage() {
           Export standings CSV
         </a>
       </div>
+      {status?.winners.detected && status.winners.detected.length > 0 && (
+        <WinnerBanner
+          winners={status.winners.detected.flatMap((e) =>
+            e.players.map((p) => ({ serial: p.serial ?? 0, name: p.name }))
+          )}
+        />
+      )}
       <p className="tnum mt-1 text-sm text-neutral-500">Game: {game?.name ?? '…'} · {game?.status ?? ''}</p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch, friendlyMessage } from '../api/client.js';
-import { useAdminGame, useAdminPlayers } from '../api/hooks.js';
+import { useAdminGame, useAdminPlayers, useAdminStatus } from '../api/hooks.js';
+import { WinnerBanner } from '../components/panels.js';
 import { CardGrid, ConfirmDialog, EmptyState } from '../components/grids.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
@@ -11,6 +12,7 @@ export function Players() {
   useLiveSync();
   const { data } = useAdminPlayers();
   const { data: game } = useAdminGame();
+  const { data: status } = useAdminStatus({ full: true });
   const [phone, setPhone] = useState('');
   const [csv, setCsv] = useState('');
   const [msg, setMsg] = useState('');
@@ -43,6 +45,13 @@ export function Players() {
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
       <h1 className="text-2xl font-black">Players ({data?.total ?? 0})</h1>
+      {status?.winners.detected && status.winners.detected.length > 0 && (
+        <WinnerBanner
+          winners={status.winners.detected.flatMap((e) =>
+            e.players.map((p) => ({ serial: p.serial ?? 0, name: p.name }))
+          )}
+        />
+      )}
       {msg && <p className="mt-2 text-sm text-red-400" role="alert">{msg}</p>}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <form

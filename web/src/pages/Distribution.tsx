@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch, friendlyMessage } from '../api/client.js';
 import { useAdminStatus } from '../api/hooks.js';
 import { EmptyState } from '../components/grids.js';
+import { WinnerBanner } from '../components/panels.js';
 import { useLiveSync } from '../hooks/useLiveSync.js';
 
 /**
@@ -20,6 +21,14 @@ export function Distribution() {
   const [msg, setMsg] = useState('');
 
   if (!data) return <div className="p-6">Loading…</div>;
+
+  {data.winners.detected && data.winners.detected.length > 0 && (
+    <WinnerBanner
+      winners={data.winners.detected.flatMap((e) =>
+        e.players.map((p) => ({ serial: p.serial ?? 0, name: p.name }))
+      )}
+    />
+  )}
   const canShare = typeof navigator !== 'undefined' && 'canShare' in navigator;
 
   let rows = data.players;
