@@ -14,7 +14,7 @@ const AuditLogSchema = new Schema<AuditLogDoc>({
   actor: { type: String, default: 'admin' },
   action: {
     type: String,
-    enum: ['draw', 'undo', 'reset_pin', 'lock_cards', 'start', 'finish', 'reopen', 'reset', 'wipe', 'regenerate_cards', 'confirm_win', 'reject_win'],
+    enum: ['draw', 'undo', 'reset_pin', 'lock_cards', 'start', 'finish', 'reopen', 'reset', 'wipe', 'regenerate_cards', 'confirm_win', 'reject_win', 'delete_game'],
     required: true,
   },
   payload: { type: Schema.Types.Mixed, default: {} },
