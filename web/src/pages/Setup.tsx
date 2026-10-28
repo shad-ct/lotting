@@ -24,7 +24,7 @@ export function Setup() {
   const [phone, setPhone] = useState('');
   const [gameMode, setGameMode] = useState<'housefull' | 'cross'>('housefull');
   const [msg, setMsg] = useState('');
-  const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'reopen'>(null);
+  const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'reopen' | 'delete'>(null);
   const [resetText, setResetText] = useState('');
   const [wipeText, setWipeText] = useState('');
 
@@ -186,6 +186,9 @@ export function Setup() {
                   Reopen game (back to live)
                 </button>
               )}
+              <button type="button" onClick={() => setConfirmAction('delete')} className="rounded-lg border border-red-700 px-3 py-1.5 text-sm font-bold text-red-300">
+                Delete game (start fresh)
+              </button>
             </div>
             <form
               className="mt-3 flex flex-wrap items-center gap-2"
@@ -259,6 +262,19 @@ export function Setup() {
         onConfirm={() => {
           setConfirmAction(null);
           doPost('/api/v1/admin/game/reopen', { confirm: true });
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'delete'}
+        title="Delete this game?"
+        body="This permanently removes the game record, players, cards, draws, wins, and audit trail. You can then create a brand new game from Step 1."
+        confirmLabel="Delete everything"
+        onConfirm={() => {
+          setConfirmAction(null);
+          apiFetch('/api/v1/admin/game', { method: 'DELETE', body: JSON.stringify({ confirm: true }) })
+            .then(refresh)
+            .catch((er: unknown) => setMsg(friendlyMessage(er)));
         }}
         onCancel={() => setConfirmAction(null)}
       />

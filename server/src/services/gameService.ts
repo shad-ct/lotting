@@ -186,3 +186,17 @@ export async function wipeGame(game: GameDoc): Promise<void> {
   bus.emit('domain', { type: 'game:status', gameId: String(gameId), status: 'setup' });
   bus.emit('domain', { type: 'admin:snapshot', gameId: String(gameId) });
 }
+/** Delete the game record entirely (and everything under it) so a brand new game can be created. Allowed in any status — typed DELETE confirmation is the guard. Audit keeps one `delete_game` entry first, then clears this game’s audit too. */
+export async function deleteGame(game: GameDoc): Promise<void> {
+  const gameId = game._id as Types.ObjectId;
+  await AuditLog.create({ gameId, actor: 'admin', action: 'delete_game', payload: {} });
+  await Draw.deleteMany({ gameId });
+  await WinEvent.deleteMany({ gameId });
+  await Card.deleteMany({ gameId });
+  await Player.deleteMany({ gameId });
+  await AuditLog.deleteMany({ gameId });
+  clearPins(String(gameId));
+  await Game.deleteOne({ _id: gameId });
+  bus.emit('domain', { type: 'game:status', gameId: String(gameId), status: 'deleted' });
+  bus.emit('domain', { type: 'admin:snapshot', gameId: String(gameId) });
+}
